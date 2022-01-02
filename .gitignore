@@ -37,3 +37,15 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# optional
+# for knitted html
+*.html
+# for MacOS system files
+.DS_Store
+Icon
+Icon?
+# for VS code configs
+*.code-workspace
+.vscode/*
+
