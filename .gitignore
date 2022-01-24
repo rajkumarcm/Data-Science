@@ -18,6 +18,7 @@
 /*.Rcheck/
 
 # RStudio files
+.Rproj
 .Rproj.user/
 
 # produced vignettes
@@ -48,4 +49,5 @@ Icon?
 # for VS code configs
 *.code-workspace
 .vscode/*
+
 
