@@ -40,17 +40,12 @@
 ,First,Last,Prefer,Team,a-Code,b-Stats,c-Biz,d-Soc Sci,e-Math / Science,f-Visual,Home-town,UG Major,UG /0 Grad?,Exp grad year,Favs / Likes,Pet peeve / Dislikes,Other notes
 >>>>>>> c233895450fa78c0b81b50340b55bf4fa7931271
 0,Edwin,Lo,Edwin,,2,1,0,0,2,0,Hong Kong,Physics,post-grad,2050,problem SolvING,bug bites,"data sci programming with R, python, web programming, current project in typescript, angular"
-1,Kohisha,Aruganti,,,,,,,,,,,,,,,
+1,Kohisha,Aruganti,kohisha,1,1,1,1,0,1,Tirupati India,Computer science Engineering,grad,2023,shuttle Badminton,,"python,HTLM,SQL,JS",
 2,Kowshik,Bezawada,,,,,,,,,,,,,,,
 3,Lokesh,Bokkisam,,,,,,,,,,,,,,,
 4,Andy,Christian,,,,,,,,,,,,,,,
-<<<<<<< HEAD
-5,Rajkumar,Conjeevaram Mohan,,,,,,,,,,,,,,,
-6,Yaswanth Sai,Devisetti,Yaswanth,1,1,0,1,1,1,0,Hyderabad,Electronics,Grad,2023,Fitness,,
-=======
 5,Rajkumar,Conjeevaram Mohan,Raj,2,2,2,0,0,2,1,"Chennai, IN",Computer Information Systems,Grad,2024,"Fitness, Music, Movies","Bed bugs, noisy environment","AI, Python, SQL, and other ML frameworks"
-6,Yaswanth Sai,Devisetti,,,,,,,,,,,,,,,
->>>>>>> 9200e37200b7eccc9e2c59e2d6b430bf77ca8b1c
+6,Yaswanth Sai,Devisetti,Yaswanth,1,1,0,1,1,1,0,Hyderabad,Electronics,Grad,2023,Fitness,,
 7,Daniel G,Dodson-Castillon,,,,,,,,,,,,,,,
 8,Mark,Febrizio,,,,,,,,,,,,,,,
 9,Rebecca,Felix,,,,,,,,,,,,,,,
@@ -60,17 +55,8 @@
 13,Illiyuna,Islam,,,,,,,,,,,,,,,
 14,Yasaswi,Kasaraneni,,,,,,,,,,,,,,,
 15,Adhithya,Kiran,,,,,,,,,,,,,,,
-<<<<<<< HEAD
-16,Adarsh,Kotla,,,,,,,,,,,,,,,
-=======
-<<<<<<< HEAD
-16,Adarsh,Kotla,,,,,,,,,,,,,,,
-17,Jiaxi,Liu,Jiaxi,4,1,1,1,1,1,1,China,"ECON&German"",GRAD,2023,"Music, Movies and dogs"",Bugs,
-=======
 16,Adarsh,Kotla,Kotla,Adarsh, , 1, 1, 1, 2, 1, 2, Hyderabad, India, Interior Design, 2023, (Problem solving, Fit-gap analysis, Deep learning, AI built mars habitats), Small talk, Python, R, SQL, tableau, tensorflow,etcS
->>>>>>> 9200e37200b7eccc9e2c59e2d6b430bf77ca8b1c
-17,Jiaxi,Liu,,,,,,,,,,,,,,,
->>>>>>> d2928844198481524029da234e16ac2428530736
+17,Jiaxi,Liu,Jiaxi,4,1,1,1,1,1,1,China,"ECON&German"",GRAD,2023,"Music, Movies and dogs"",Bugs,
 18,Sophia,Mir,,,,,,,,,,,,,,,
 19,Sumanth,Nallamotu,,,,,,,,,,,,,,,
 20,Ange,Olson,,,,,,,,,,,,,,,
