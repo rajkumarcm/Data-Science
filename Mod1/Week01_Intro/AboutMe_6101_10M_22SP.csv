@@ -11,7 +11,7 @@
 5,Rajkumar,Conjeevaram Mohan,,,,,,,,,,,,,,,
 6,Yaswanth Sai,Devisetti,,,,,,,,,,,,,,,
 7,Daniel G,Dodson-Castillon,,,,,,,,,,,,,,,
-8,Mark,Febrizio,,,,,,,,,,,,,,,
+8,Mark,Febrizio,6,1,1,0,2,1,1,"West Sayville, NY","BS Government","Grad",2022,"Music, fitness, reading, church, open-source data","Daylight savings time, proprietary software","full-time research associate as GW; self-taught Python",
 9,Rebecca,Felix,,,,,,,,,,,,,,,
 10,Meghana,Gantla,,,,,,,,,,,,,,,
 11,Arundhati,Gupta,Aru,5,0,2,1,1,1,2,"New Delhi, India",Financial Economics,Grad,2023,"Movies, travelling",Loud Chewing,"Economics, JMP, Tableau, PowerBI"
@@ -66,6 +66,7 @@
 23,Alex,Thiersch,,,,,,,,,,,,,,,
 24,Janet,Zhuang,,,,,,,,,,,,,,,
 <<<<<<< HEAD
+<<<<<<< HEAD
 25,Xuan,Zou,,,,,,,,,,,,,,,
 <<<<<<< HEAD
 >>>>>>> f9f15ef839440d11c1b3f2d160e58968df7faec5
@@ -75,6 +76,22 @@
 >>>>>>> 9f02b199b70ed92fb3aa22291e218ea80472b605
 =======
 25,Xuan,Zou,,,,,,,,,,,,,,,
+=======
+<<<<<<< Updated upstream
+25,Xuan,Zou,,,,,,,,,,,,,,,
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+25,Xuan,Zou,,,,,,,,,,,,,,,
+<<<<<<< HEAD
+>>>>>>> f9f15ef839440d11c1b3f2d160e58968df7faec5
+>>>>>>> 5732a2a73cc1cb204cb4a46aabad408494db611b
+=======
+
+>>>>>>> 9f02b199b70ed92fb3aa22291e218ea80472b605
+=======
+25,Xuan,Zou,,,,,,,,,,,,,,,
+>>>>>>> markfeb
 >>>>>>> c233895450fa78c0b81b50340b55bf4fa7931271
 =======
 ,First,Last,Prefer,Team,a-Code,b-Stats,c-Biz,d-Soc Sci,e-Math / Science,f-Visual,Home-town,UG Major,UG / Grad?,Exp grad year,Favs / Likes,Pet peeve / Dislikes,Other notes,,,,,,,,,
@@ -105,3 +122,10 @@
 24,Janet,Zhuang,,,,,,,,,,,,,,,,,,,,,,,,
 25,Xuan,Zou,,,,,,,,,,,,,,,,,,,,,,,,
 >>>>>>> b71522d85dfb9e1ec051a4812b9769a3c3f5d72f
+<<<<<<< HEAD
+=======
+=======
+25,Xuan,Zou,,,,,,,,,,,,,,,
+>>>>>>> markfeb
+>>>>>>> Stashed changes
+>>>>>>> markfeb
