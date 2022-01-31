@@ -1,0 +1,228 @@
+---
+title: "EDA, z-score, variance"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=F}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+# Once installed, load the library.
+library(ezids)
+```
+
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+# knitr::opts_chunk$set(include = F)
+# knitr::opts_chunk$set(echo = TRUE)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# EDA
+
+Like before, let's load our data and create a dataframe call **mlb**, then take a look.
+
+```{r import_data}
+getwd()
+# mlb <- data.frame(read.csv("BaseballHeightWeight.csv", header = TRUE))
+mlb <- data.frame(read.csv("BaseballHeightWeight.csv", header = TRUE))
+str(mlb)
+head(mlb)
+```
+
+```{r, results='asis'}
+colnames(mlb)[4:6]=c("height","weight","age")
+# The line above produces no output. To see the changes, use str() or head()
+xkabledplyhead(mlb, title = "Header rows for mlb dataset")
+```
+
+Now, let's do some EDA.
+
+First, the histograms.
+
+```{r}
+#Start with individual variables of Height Weight and Age
+hist(mlb$height, main="Histogram of baseball player Height", xlab="Height (inches)", col = 'blue' )
+library(ggplot2)
+ggplot(data=mlb, aes(height)) + 
+  geom_histogram(breaks=seq(66, 86, by = 1), 
+                 col="red", 
+                 fill="blue", 
+                 alpha = .7) + # opacity
+  labs(x="height (in)", y="Frequency") +
+  labs(title="Baseball player height histogram using `ggplot`") 
+
+```
+
+Next try the boxplots.
+
+```{r}
+boxplot(mlb$height, main="Boxplot of baseball player height", ylab="height (inches)", col = 'red' )
+ggplot(mlb, aes(y=height)) + 
+  geom_boxplot() + 
+  geom_boxplot( colour="orange", fill="#7777cc", outlier.colour="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Baseball player height boxplot using `ggplot`", x="", y = "height (in)")
+```
+
+Now the Q-Q plot, adding a theoretical line to the plot.
+
+```{r}
+qqnorm(mlb$height, main="Q-Q plot of Baseball player heights") 
+qqline(mlb$height)
+shapiro.test(mlb$height) # Shapiro-Wilk test for normality
+ks.test(mlb$height,pnorm) # Kolmogorov-Smirnov Tests against normal distribution
+```
+
+We'll talk more about the shapiro test after we introduce formal statistical testings. In the meantime, we can look into other EDA tools and techniques.
+
+```{r EDA2}
+sd.height <- sd(mlb$height)
+mean.height <- mean(mlb$height)
+# sd.weight <- sd(mlb$weight)   # error if there are N/A values
+sd.weight <- sd(mlb$weight, na.rm = TRUE)
+mean.weight <- mean(mlb$weight, na.rm = TRUE)
+mean.weight
+sd.weight
+sd.height
+```
+
+
+We can also run the vairance, mean, and sd directly.
+
+```{r, echo=TRUE}
+var(mlb$height, na.rm = T)
+mean(mlb$height, na.rm = T)
+sd(mlb$height, na.rm = T)
+```
+
+Now that we know the mean and std we can generate a z score for individual heights and probabilities
+
+```{r}
+z80height <- (80-mean.height)/sd.height
+z80height
+```
+
+Note that now we have a z score, we could look it up on a table or use R to calculate the percentage (assumed normal dist), pnorm tells us the percentage.
+
+```{r, echo = F}
+pnorm(z80height) # pnorm to find the probability
+qnorm(pnorm(z80height)) # qnorm to find the z-value, the inverse of pnorm.  In this case, the answer is just z80height
+```
+
+Better yet, we can convert raw scores into z-scores easily for all the data:
+
+```{r, echo=TRUE}
+mlb$zheight = scale(mlb$height)
+mlb$zweight = scale(mlb$weight)
+```
+
+Notice that the dataframe mlb has two more columns/variables now. 
+
+Let us simply check that zheight and zweight are centered at zero, with sd = 1 as expected.
+
+```{r, echo=F}
+mean(mlb$zheight, na.rm = TRUE)
+sd(mlb$zheight, na.rm = TRUE)
+
+summary(mlb$zheight)
+summary(mlb$zweight)
+```
+
+And try this describe function:
+
+```{r, echo = F, message=FALSE, warning=FALSE}
+loadPkg("Hmisc") # this package contains the describe function below
+describe(mlb$weight)
+```
+
+It's a nicer way to describe the data, then say, `summary()`. But `describe()` does not work on the entire dataframe. Only one vector at a time.
+
+## Handy Outlier Function
+
+This function will show you a quick view of the data with and without the outliers. You need to choose to option of whether you want to remove the outliers at the end of execution. You can also modify the codes per your need, such as no prompt for easier knitting, or option to remove the outlier and save as a different dataframe. I have included this outlierKD function (by Klodian Dhana) into the `ezids` library for convenience. The following code chunk is NOT evaluated. The one in `ezids` will be loaded and used instead.
+
+```{r outlierKD, eval=FALSE }
+# By Klodian Dhana, https://www.r-bloggers.com/identify-describe-plot-and-remove-the-outliers-from-the-dataset/
+# I have also included this outlierKD function in the `ezids` library. 
+# There is no need in the future to copy/paste this function as long as the ezids library has been loaded. 
+# I have also included a modified version outlierKD2( ) function in the `ezids` library to tweak it for our needs. 
+#
+outlierKD <- function(dt, var) { 
+     var_name <- eval(substitute(var),eval(dt))
+     na1 <- sum(is.na(var_name))
+     m1 <- mean(var_name, na.rm = T)
+     par(mfrow=c(2, 2), oma=c(0,0,3,0))
+     boxplot(var_name, main="With outliers")
+     hist(var_name, main="With outliers", xlab=NA, ylab=NA)
+     outlier <- boxplot.stats(var_name)$out
+     mo <- mean(outlier)
+     var_name <- ifelse(var_name %in% outlier, NA, var_name)
+     boxplot(var_name, main="Without outliers")
+     hist(var_name, main="Without outliers", xlab=NA, ylab=NA)
+     title("Outlier Check", outer=TRUE)
+     na2 <- sum(is.na(var_name))
+     cat("Outliers identified:", na2 - na1, "n")
+     cat("Propotion (%) of outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "n")
+     cat("Mean of the outliers:", round(mo, 2), "n")
+     m2 <- mean(var_name, na.rm = T)
+     cat("Mean without removing outliers:", round(m1, 2), "n")
+     cat("Mean if we remove outliers:", round(m2, 2), "n")
+     response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
+     if(response == "y" | response == "yes"){
+          dt[as.character(substitute(var))] <- invisible(var_name)
+          assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+          cat("Outliers successfully removed", "n")
+          return(invisible(dt))
+     } else{
+          cat("Nothing changed", "n")
+          return(invisible(var_name))
+     }
+}
+```
+
+
+Running the outlierKD code below triggers a prompt on the console window (yes/no). Answer there to continue.
+
+```{r}
+outlierKD(mlb, height)
+```
+
+Now you can check if the dataframe is changed.
+
+```{r results='asis'}
+str(mlb)
+xkablesummary(mlb)
+```
+
+I took the outlierKD function and made some modifications. First, the user input propmt is built into the function (default: do not remove outlier). The new function also allow the returned result be saved as another dataframe, so that the original dataframe can be left intact. A QQ-plot option is also added. See help menu for more detailed documentation.
+
+```{r}
+mlbclean = outlierKD2(mlb, height, rm = TRUE, boxplt = TRUE, qqplt = TRUE)
+```
+
+Now check the new dataframe:
+
+```{r}
+str(mlbclean)
+xkablesummary(mlbclean)
+```
+
+As you can see, the outliers are replaced by NAs. They are not deleted from the df. 
