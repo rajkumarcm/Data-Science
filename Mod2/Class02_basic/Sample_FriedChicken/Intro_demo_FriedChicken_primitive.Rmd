@@ -80,7 +80,7 @@ There are a bit of things we typically look at for EDA.
     + ...
 
 ### Basic statistics
-```{r EDA_basicstats, results=T}
+```{r EDA_basicstats, results='asis'}
 # str(kfcw)
 summary(kfcw)
 ```
@@ -88,7 +88,7 @@ summary(kfcw)
 When I ran this the first time, the minimum number of wings is **negative 5**. That's obviously a mistake. Have an action plan to fix such non-sensible or missing values. For me, it's just getting some more coffee. 
 After I fixed it, re-run the EDA, and all looks good now.
 
-```{r EDA_rerun, results=T}
+```{r EDA_rerun, results='asis'}
 kfcw[1,1]=5  # equal sign "=" and assignment operator "<-" are interchangeable in R
 # structure of the data frame kfcw
 # str(kfcw)
@@ -162,7 +162,7 @@ We'll learn to interpret these soon.
 
 Now if those passed the smell test, we can try build some models. Linear model is first to come to mind. We will model the price with wing and drum as the two independent variables (also called features).
 
-```{r linear_model, results=T}
+```{r linear_model, results='asis'}
 # build a simple linear model (least square fit) of price as a function of everything else.
 chicklm = lm(price ~ ., data=kfcw)
 summary(chicklm)
@@ -172,7 +172,7 @@ As we can see, the R$^2$ (using $\LaTeX$ formatting here) value of the linear mo
 
 If we use the (default 95%) confidence intervals of the coefficients as shown here:
 
-```{r confint.lm, results=T}
+```{r confint.lm, results='asis'}
 coeffconfint = confint.lm(chicklm) 
 coeffconfint
 ```
@@ -187,7 +187,7 @@ We find that:
 Check:   
 We should always check for multi-collinearity in linear models. Here are the **Variance Inflation factors VIF**.  
 
-```{r linearmodel_vif, results=T}
+```{r linearmodel_vif, results='asis'}
 library("faraway") # faraway library is one of them has a vif function
 # VIF check the collinearity issues between different variables/features in a (linear) model
 vif(chicklm)
@@ -225,7 +225,7 @@ So what is the best deal???
 ## First bite
 
 Let me compare the predicted values from the model with the actual values. In other words, look at the residual values.
-```{r residual, results=T, echo=T}
+```{r residual, results='asis', echo=T}
 kfcw$fitval = chicklm$fitted.values
 kfcw$residuals = chicklm$residuals
 kfcw
@@ -242,7 +242,7 @@ But if I am wiser, and insist on having a one-person portion:
 ## Double dip
 Hold on! If we plan to do this regularly, shouldn't we inspect the percentage savings instead? 
 
-```{r residualpercent, results=T, echo=T}
+```{r residualpercent, results='asis', echo=T}
 kfcw$res_2_p = chicklm$residuals/kfcw$price*100
 kfcw
 ```

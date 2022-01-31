@@ -67,7 +67,7 @@ summary(cars)
 
 We will from now on, take advantages of the display functions in the library `ezids` to make the output look nicer like this:
 
-```{r, results=T}
+```{r, results ='asis'}
 xkablesummary(cars, title = "Cars Statistics Summary")
 ```
 
@@ -119,8 +119,8 @@ loadPkg("ggplot2") # you can use library with or without double quotes. But inst
 head(mpg)
 ggplot(data=mpg)+
   geom_point(mapping = aes(x=displ, y=hwy))+
-  labs(title="Scatterplot: hwy (y) vs disp (x)") +
-  labs(x="Disp (L)", y="Hwy (mpg)") 
+  labs(x="Disp (L)", y="Hwy (mpg)") +
+  labs(title="Scatterplot: hwy (y) vs disp (x)") 
   # ALWAYS add title, and NEVER say x vs y.
 # detach("package:ggplot2", unload = T) # consider detach packages no longer use to free up system memory
 ```
@@ -129,8 +129,8 @@ Now we can also add a color into the mix with a simple adjustment to the code
 ```{r, echo=TRUE}
 ggplot(data=mpg)+
   geom_point(mapping = aes(x=displ, y=hwy, color=class)) +
-  labs(title="Scatterplot: hwy (y) vs disp (x)") +
-  labs(x="Disp (L)", y="Hwy (mpg)") 
+  labs(x="Disp (L)", y="Hwy (mpg)") +
+  labs(title="Scatterplot: hwy (y) vs disp (x)") 
 # detach("package:ggplot2", unload = T) # consider detach packages no longer use to free up system memory
 ```
 
@@ -157,8 +157,8 @@ loadPkg("tidyverse")
 glimpse(Admit)
 ggplot(data=Admit)+
   geom_point(mapping = aes(x=gpa, y=gre))+
-  labs(title="Scatterplot: GRE vs GPA") +
-  labs(x="GPA", y="GRE") 
+  labs(x="GPA", y="GRE") +
+  labs(title="Scatterplot: GRE vs GPA") 
 # detach("package:ggplot2", unload = T) # consider detach packages no longer use to free up system memory
 unloadPkg("tidyverse")
 ```

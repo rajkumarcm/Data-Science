@@ -74,8 +74,8 @@ library(ggplot2) # you can use library with or without double quotes. But instal
 head(mpg)
 ggplot(data=mpg)+
   geom_point(mapping = aes(x=displ, y=hwy))+
-  labs(title="Scatterplot: hwy (y) vs disp (x)") +
-  labs(x="Disp (L)", y="Hwy (mpg)") 
+  labs(x="Disp (L)", y="Hwy (mpg)") +
+  labs(title="Scatterplot: hwy (y) vs disp (x)") 
   # ALWAYS add title, and NEVER say x vs y.
 # detach("package:ggplot2", unload = T) # consider detach packages no longer use to free up system memory
 ```
@@ -84,8 +84,8 @@ Now we can also add a color into the mix with a simple adjustment to the code
 ```{r, echo=TRUE,tidy=TRUE}
 ggplot(data=mpg)+
   geom_point(mapping = aes(x=displ, y=hwy, color=class)) +
-  labs(title="Scatterplot: hwy (y) vs disp (x)") +
-  labs(x="Disp (L)", y="Hwy (mpg)") 
+  labs(x="Disp (L)", y="Hwy (mpg)") +
+  labs(title="Scatterplot: hwy (y) vs disp (x)")
 # detach("package:ggplot2", unload = T) # consider detach packages no longer use to free up system memory
 ```
 
@@ -111,8 +111,8 @@ glimpse(Admit)
 #library(ggplot2)
 ggplot(data=Admit)+
   geom_point(mapping = aes(x=gpa, y=gre))+
-  labs(title="Scatterplot: GRE vs GPA") +
-  labs(x="GPA", y="GRE") 
+  labs(x="GPA", y="GRE") +
+  labs(title="Scatterplot: GRE vs GPA") 
 ```
 
 As you might now notice, install.packages does not work well with knitr. You will need to comment out these lines before knitting. Other functions such as "View", "edit", which shifts the focus to another window/tab also do not work well with knitting. You will also need to comment out those lines as well.
