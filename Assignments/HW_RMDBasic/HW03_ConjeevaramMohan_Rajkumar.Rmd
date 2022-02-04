@@ -19,6 +19,7 @@ output:
 # Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
 # Once installed, load the library.
 library(ezids)
+library(ggplot2)
 ```
 
 
@@ -69,7 +70,7 @@ baseball <- data.frame(baseball)
 # Turns out either method gives the same result. In some cases (depending on the .csv file), they might differ. To be safe, I usually use data.frame( ) afterwards.
 ```
 
-The function `read.csv()` was used to load the dataframe. In addition, we can see that there are `r nrow(baseball)` in the dataframe. 
+The function `read.csv()` was used to load the dataframe. In addition, we can see that there are `r nrow(baseball)` in the dataframe.
 Note that `read.csv()` is just one of the many functions you can use to import data files. 
 
 The structure is printed below:
@@ -116,24 +117,27 @@ colnames(baseball) <- baseball.colnames
 
 ## Question 4. Head again
 **Print out the first two lines again to see the new column names.**  
-```{r}
+```{r, results='asis'}
 xkabledplyhead(baseball, 2)
 ```
 
 ## Question 5. Summary
 **Find the statistics (summary) of the heights, weights, and ages of the players. Using complete sentences, give the reader these summary.**  
-```{r, echo=T}
-tmp_s <- summary(baseball)
+```{r, echo=T, results='asis'}
+tmp_s <- xkablesummary(baseball)
 print(tmp_s)
 # I have given %.2f for age and height instead of %.1f since I can't for now 
 # look at every possible value in the list to verify.
-print("There are in total 1034 Baseball players with an average age, Weight, and Height of 28.7, 202, 73.7 respectively")
 ```
+There are in total 1034 Baseball players with an average age, Weight, and Height of 28.7, 202, 73.7 respectively.  
+While most of the player are aged between 25.4 and 31.2, the data shows minimum age of 20.9 and maximum of 48.5  
+Also, players were normally found to have a height between 72 and 75, but exceptional case such as being 67 and 83 tall do exist.  
+At last, data shows most players weigh between 187 and 202, but there are exceptional cases, also known as outliers from Data Science perspective, that shows weights 150 and 290 as two extremes.
 
 
 ## Question 6. Subset
 **You should find an issue with the weight data with an NA value. Use the `subset( )` function, select that data point (save as shyboy) and find out who the shy boy was.**
-```{r}
+```{r, results='asis'}
 shyboy.index <- which(is.na(baseball[, "Weight"]))
 shyboy <- baseball[shyboy.index, ]
 sprintf("It turns out the shyboy was %s", shyboy$Name)
@@ -143,7 +147,7 @@ sprintf("It turns out the shyboy was %s", shyboy$Name)
 
 ## Question 7. Remove Shyboy
 **Remove shyboy from baseball, and then show the number of observations of the cleaned up dataframe baseball.**  
-```{r}
+```{r, results='asis'}
 baseball <- baseball[-shyboy.index, ]
 print(nrow(baseball))
 ```
@@ -152,7 +156,6 @@ print(nrow(baseball))
 ## Question 8. Boxplot
 **Make a quick boxplot of the weight of the players. Use the `title( )` function immediately to add a title to the chart. (Try color #0000FF for blue.)**  
 ```{r}
-library(ggplot2)
 ggplot(baseball, aes(x='Players', y=Weight)) + 
 geom_boxplot(width=0.5, lwd=0.5, outlier.color='red', fill='#0000FF', alpha=0.5) + 
 stat_boxplot(geom = "errorbar", # Boxplot with error bars 
@@ -183,7 +186,7 @@ ggplot(baseball, aes(x=Height, y=Weight)) +
 geom_jitter(color='red', alpha=0.5) +
 xlab('Height') +
 ylab('Weight') +
-labs(subtitle='Baseball players Height vs Weight')
+labs(subtitle='Comparison of weights against heights of baseball players')
 ```
 
 
@@ -192,7 +195,7 @@ labs(subtitle='Baseball players Height vs Weight')
 ```{r}
 ggplot(baseball, aes(x=Height, y=Weight, col=age)) +  
 geom_jitter(alpha=0.5) +  
-labs(subtitle='Baseball players Height vs Weight') +  
+labs(subtitle='Comparison of weights against heights of baseball players') +  
 xlab('Height') +  
 ylab('Weight')  
 ```
@@ -200,14 +203,14 @@ ylab('Weight')
 
 ## Question 12. Team Washington
 **Obtain a subset of the data with only Team Washington. Using complete sentences, give the number of players in Team Washington.**
-```{r}
+```{r, results='asis'}
 subset.was <- baseball[baseball[, "Team"] == "WAS", ]
 sprintf("There are %d baseball players who play for team Washington (WAS)", nrow(subset.was))
 ```
 
 ## Question 13. Old Team Washington
 **Obtain another subset with Team Washington and only players older than 28. How many are there in this veteran group?**
-```{r}
+```{r, results='asis'}
 subset.was_over_28 <- baseball[baseball[, "Team"] == "WAS" & baseball[, "age"] > 28, ]
 sprintf("There are %d baseball players who are over 28 years old and play for team Washington (WAS)", nrow(subset.was_over_28))
 ```
