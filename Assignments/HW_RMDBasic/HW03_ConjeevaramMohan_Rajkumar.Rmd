@@ -177,13 +177,13 @@ labs(subtitle="Baseball players weights boxplot") +
 xlab("Aggregated players") + 
 ylab("Weight")
 ```
-
+The distribution does appear normal.
 
 ## Question 10. Scatterplot
 **Use ggplot, make a plot with weights vs heights of the players, color by Teams. Give it an appropriate title.**  
 ```{r}
 ggplot(baseball, aes(x=Height, y=Weight)) +
-geom_jitter(color='red', alpha=0.5) +
+geom_jitter(aes(color=Team), alpha=0.5) +
 xlab('Height') +
 ylab('Weight') +
 labs(subtitle='Comparison of weights against heights of baseball players')
