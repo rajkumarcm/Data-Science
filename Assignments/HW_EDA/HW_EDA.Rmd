@@ -90,7 +90,7 @@ Making a scatterplot (using `ggplot()`), between sodium and calorie, color by th
 
 ### Question 6 
 **Make Plots - 3**  
-Making another scatterplot (using `ggplot()`), between sodium and calorie, color by protein. /what major difference do you see between this and the previous scatterplot? 
+Making another scatterplot (using `ggplot()`), between sodium and calorie, color by protein. What major difference do you see between this and the previous scatterplot? 
 
 
 ### Question 7 
