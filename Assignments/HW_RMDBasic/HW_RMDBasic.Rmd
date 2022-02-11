@@ -97,17 +97,11 @@ xkabledplytail(baseball, 3, "The last 3 rows using `xkabledplytail` function." )
 
 ## Question 3. Header change
 **Change the headers/column names from Weight.pounds. to weight, from Height.inches. to height, and Age to age.**  
-```{r,result="asis"}
-names(baseball)[5]<-"weight"
-names(baseball)[4]<-"height"
-names(baseball)[6]<-"age"
-```
+
 
 ## Question 4. Head again
 **Print out the first two lines again to see the new column names.**  
-```{r, results="asis"}
-xkabledplyhead(baseball, 2, "The first 2 rows using `xkabledplyhead` function." )
-```
+
 
 
 ## Question 5. Summary
