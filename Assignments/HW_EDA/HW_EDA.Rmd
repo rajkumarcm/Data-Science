@@ -1,0 +1,104 @@
+---
+title: "R Assignment - Pizza EDA"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r}
+# 1. Answer each question using in words/paragraph. 
+# 2. DO NOT use comments inside code blocks (like here) to answer anything. Those are for notes between 
+# coders/yourself. They will be ignored, and not counted as answers. 
+# 3. Keep the line/option    knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+# You can temporarily turn this on/off and use other option while you are working on the homework if it helps. 
+# The submitted work should have this option selected instead.
+# 4. All charts/graphs/tables should have appropriate captions. 
+# 5. You may want to use the ezids::outlierKD2 function to handle outliers
+# 6. Your grade is also determined by the style. Even if you answers everything correctly, but the html does not look appealing, you will NOT get the full credits. Pay attention to the details that we mentioned in class and in previous sample RMD files. How to use #, ##, ###, ..., bold face, italics, inline codes, LaTeX, tables, ...,  {results = "asis"}, single space vs two spaces at the end of line, ... , use of colors in plots/ggplots, and so forth.
+```
+
+
+# HW Assignment - EDA
+
+This pizza ingredient dataset is from data.world (@sdhilip) The variables are:  
+
+Variable | Definition  
+-----|------- 
+brand	 | Pizza brand
+id | ID
+mois | Amount of water per 100 grams in the sample
+prot | Amount of protein per 100 grams in the sample
+fat | Amount of fat per 100 grams in the sample
+ash | Amount of ash per 100 grams in the sample
+sodium | Amount of sodium per 100 grams in the sample
+carb | Amount of carbohydrates per 100 grams in the sample
+cal | Amount of calories per 100 grams in the sample
+
+As with all your work in this class, knit the RMD file into HTML, zip it with the RMD, and submit the zip file on Blackboard. 
+
+Compose your answers using inline R code instead of using the code-block output as much as you can. Coder's comments inside code blocks are never graded. 
+
+## Pizza Ingredient dataset
+
+### Question 1  
+**Import the dataset into R.**   
+
+
+```{r}
+pizza = data.frame(read.csv("Pizza.csv"))
+```
+
+### Question 2  
+**How many data points are there?**  
+You can use the `length()` or `nrow()` function.  
+
+
+### Question 3  
+**Look at the summary statistics of the dataset.**  
+Use the `xkablesummary()` function?
+
+
+### Question 4 
+**Make Plots - 1**  
+For sodium and calorie, make histograms, boxplots (using `ggplot()`), and QQ-plots (just regular `qqnorm()` function). Make sure all plots have appropriate titles, x- and y- labels, units on the axes if applicable. It is also much nicer to add some color to your charts instead of plain old black and white. For chart titles, if no appropriate title you can think of, just use y vs x. Don’t get mixed up (somehow I find up to half of the presentations have the wrong ones). It is NEVER x vs y. **Always y vs x**.
+
+### Question 5 
+**Make Plots - 2**  
+Making a scatterplot (using `ggplot()`), between sodium and calorie, color by the brand. As always, give the plot appropriate title, axis labels, and make it look good. 
+
+### Question 6 
+**Make Plots - 3**  
+Making another scatterplot (using `ggplot()`), between sodium and calorie, color by protein. /what major difference do you see between this and the previous scatterplot? 
+
+
+### Question 7 
+**Make Plots - 4**  
+This time, make a plot with sodium as y, and brand as x. (What kind of plot would you choose?) 
+
+
+### Question 8 
+**Outliers**  
+Use the `ezids::outlierKD2()` function to remove the outliers for sodium, then run the function again to remove outliers on calories. Re-do the QQ-plots for these two variables. Do you see much improvements?
+
