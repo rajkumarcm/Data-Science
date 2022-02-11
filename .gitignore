@@ -42,6 +42,7 @@ vignettes/*.pdf
 # optional
 # for knitted html
 *.html
+*.tmphtml
 # for MacOS system files
 .DS_Store
 Icon
@@ -50,4 +51,7 @@ Icon?
 *.code-workspace
 .vscode/*
 
+# ignore the gitignore itself as I do not want to dump my preferences on others
+.gitignore
+*.zip
 
