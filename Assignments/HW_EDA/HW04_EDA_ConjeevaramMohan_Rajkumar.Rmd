@@ -19,12 +19,16 @@ output:
 # some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
 library(ezids)
+library(ggplot2)
+library(ggExtra)
+library(gridExtra)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
 knitr::opts_chunk$set(warning = F, results = "hide", message = F)
 options(scientific=T, digits = 3) 
 # options(scipen=9, digits = 3) 
 # ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
 # use scipen=999 to prevent scientific notation at all times
+options(scipen=999)
 ```
 
 ```{r}
@@ -72,33 +76,238 @@ pizza = data.frame(read.csv("Pizza.csv"))
 
 ### Question 2  
 **How many data points are there?**  
-You can use the `length()` or `nrow()` function.  
+There are `r nrow(pizza)` observations in the dataset.
 
 
 ### Question 3  
 **Look at the summary statistics of the dataset.**  
 Use the `xkablesummary()` function?
-
+```{r, results='asis'}
+xkablesummary(pizza)
+```
 
 ### Question 4 
 **Make Plots - 1**  
-For sodium and calorie, make histograms, boxplots (using `ggplot()`), and QQ-plots (just regular `qqnorm()` function). Make sure all plots have appropriate titles, x- and y- labels, units on the axes if applicable. It is also much nicer to add some color to your charts instead of plain old black and white. For chart titles, if no appropriate title you can think of, just use y vs x. Don’t get mixed up (somehow I find up to half of the presentations have the wrong ones). It is NEVER x vs y. **Always y vs x**.
+For sodium and calorie, make histograms, boxplots (using `ggplot()`), and QQ-plots (just regular `qqnorm()` function). Make sure all plots have appropriate titles, x- and y- labels, units on the axes if applicable. It is also much nicer to add some color to your charts instead of plain old black and white. For chart titles, if no appropriate title you can think of, just use y vs x. Don’t get mixed up (somehow I find up to half of the presentations have the wrong ones). It is NEVER x vs y. **Always y vs x**.  
+
+```{r}
+
+p1 <- ggplot(data=pizza, aes(x=sodium, y=..density..)) +
+      geom_histogram(fill='blue', color='white', alpha=0.45, bins=10, aes(y=..density..)) +
+      geom_density(color='red', lwd=1 ) +
+      xlab('Sodium level (gms)') + 
+      ylab('sodium level freq') +
+      ggtitle(label='Sodium level dist') +
+      theme_minimal() +
+      theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+            panel.border = element_rect(color = "burlywood4", fill=NA, size=2))
+  
+p2 <- ggplot(data=pizza, aes(x=cal)) +
+      geom_histogram(fill='orange', color='white', alpha=0.45, bins=10, aes(y=..density..)) +
+      geom_density(color='red', lwd=1) +
+      xlab('Calorie level (gms)') +
+      ylab('calorie level freq') +
+      ggtitle(label='Calorie level dist') +
+      theme_minimal() +
+      theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+            panel.border = element_rect(color = "burlywood4", fill=NA, size=2))
+
+p3 <- ggplot(data=pizza, aes(y=sodium)) + 
+      geom_boxplot(fill='blue', alpha=0.45, outlier.color='red', outlier.alpha=0.4, notch=T, notchwidth=0.5, outlier.shape=8) +
+      stat_boxplot(geom='errorbar') +
+      ggtitle(label='Sodium level boxplot') +
+      ylab('Distribution of sodium level (gms)') +
+      theme_minimal() +
+      theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+            panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+p4 <- ggplot(data=pizza, aes(y=cal)) + 
+      geom_boxplot(fill='orange', alpha=0.45, outlier.color='red', outlier.alpha=0.4, notch=T, notchwidth=0.5, outlier.shape=8) +
+      stat_boxplot(geom='errorbar') +
+      ggtitle(label='Calorie level boxplot') +
+      ylab('Distribution of calorie level (gms)') +
+      theme_minimal() +
+      theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+            panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+n <- nrow(pizza)
+pizza.melted <- reshape(pizza, 
+            		        varying = c("sodium", "cal"),
+                        v.names = "value",
+                        timevar = "value_type", 
+                        times = c("sodium", "cal"),
+            		        new.row.names = 1:(n*2),
+            		        direction = "long")
+
+bplot_sc <- ggplot(data=pizza.melted, aes(x=value_type, y=value)) +
+            geom_boxplot(outlier.shape=8, outlier.color='red', outlier.alpha=0.4, fill=c('orange', 'blue'), alpha=0.4,width=0.3)+
+            stat_boxplot(geom='errorbar')+
+            ggtitle('Comparison of calorie and sodium level distribution')+
+            xlab('Nutrient type')+
+            ylab('Distribution of nutrient value (gms)s')+
+            theme_minimal()+
+            theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+                  panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+bplot_sod_brand <- ggplot(data=pizza, aes(x=brand, y=sodium, color=brand, fill=brand)) +
+                   geom_boxplot(alpha=0.45, outlier.color='red', outlier.alpha=0.4, notch=T, notchwidth=0.5, outlier.shape=8) +
+                   #geom_jitter() + # This obfuscates important information
+                   stat_boxplot(geom='errorbar') +
+                   ggtitle(label='Boxplot of sodium level in pizza by different brands') +
+                   ylab('sodium level (gms) dist') + 
+                   theme_minimal() +
+                   theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+                         panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+bplot_cal_brand <- ggplot(data=pizza, aes(x=brand, y=cal, color=brand, fill=brand)) +
+                   geom_boxplot(alpha=0.45, outlier.color='red', outlier.alpha=0.4, notch=T, notchwidth=0.5, outlier.shape=8) +
+                   #geom_jitter() + # This obfuscates important information
+                   stat_boxplot(geom='errorbar') +
+                   ggtitle(label='Boxplot of calorie level in pizza by different brands') +
+                   ylab('calorie level (gms)') +
+                   theme_minimal() +
+                   theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+                         panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+grid.arrange(p1, p2, p3, p4, nrow=2)
+bplot_sc
+bplot_sod_brand
+bplot_cal_brand
+# grid.arrange(bplot_sc, bplot_brand, nrow=2, ncol=1)
+
+```
+
+#### **Normality test**
+```{r}
+make_qqplot <- function(df, cnames, df2=NULL)
+{
+  n_cols <- length(cnames)
+  if(is.null(df2))
+  {
+    par(mfrow=c(1, n_cols)) 
+  }
+  else
+  {
+    par(mfrow=c(n_cols, 2))
+  }
+  
+  
+  for(i in 1:n_cols){
+    cname <- cnames[i]
+    label <- sprintf("QQ plot of %s level", cname)
+    qqnorm(df[, cname], main=label)
+    qqline(df[, cname])  
+    
+    if(!is.null(df2))
+    {
+      qqnorm(df2[, cname], main=label)
+      qqline(df2[, cname])  
+    }
+  }
+}
+
+make_qqplot(pizza, c('sodium', 'cal'))
+
+```
 
 ### Question 5 
 **Make Plots - 2**  
 Making a scatterplot (using `ggplot()`), between sodium and calorie, color by the brand. As always, give the plot appropriate title, axis labels, and make it look good. 
+```{r}
+p_cal_sod1 <- ggplot(pizza, aes(x=cal, y=sodium, color=brand)) +
+                     geom_point() +
+                     xlab('calorie level (gms)') +
+                     ylab('sodium level (gms)') +
+                     ggtitle(label='Visualization of relationship between sodium and calorie level') +
+                     theme_minimal() +
+                     theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+                           panel.border=element_rect(color='burlywood4', fill=NA, size=2),
+                           legend.position='left')
+p_cal_sod1 <- ggMarginal(p_cal_sod1, type='boxplot', fill='darkgray')
+p_cal_sod1
+```
 
 ### Question 6 
 **Make Plots - 3**  
 Making another scatterplot (using `ggplot()`), between sodium and calorie, color by protein. /what major difference do you see between this and the previous scatterplot? 
-
+```{r}
+library(viridis)
+p_cal_sod2 <- ggplot(pizza, aes(x=cal, y=sodium, color=prot)) +
+                     geom_point() +
+                     scale_color_viridis(discrete = F, direction=-1)+
+                     scale_fill_viridis(discrete = F)+
+                     xlab('calorie level (gms) ') +
+                     ylab('sodium level (gms)') +
+                     ggtitle(label='Visualization of relationship between sodium and calorie level') +
+                     theme_minimal() +
+                     theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+                           panel.border=element_rect(color='burlywood4', fill=NA, size=2),
+                           legend.position='left')
+p_cal_sod2 <- ggMarginal(p_cal_sod2, type='histogram', fill='azure4')
+p_cal_sod2
+```
 
 ### Question 7 
 **Make Plots - 4**  
-This time, make a plot with sodium as y, and brand as x. (What kind of plot would you choose?) 
+This time, make a plot with sodium as y, and brand as x. (What kind of plot would you choose?)  
+Ans:  
+***I believe you are referring to boxplot with x as brand, something I have done before this question. However, I will add that to another plot that I think would be also useful. A quick note, for the first plot, the red represents high calorie level while the blue represents less than or equal to average calorie. It appears it is an internal bug with ggplot not to show legend while using grouping***
+```{r}
+library(dplyr)
+total_cal_mean <- mean(pizza$cal)
+by_brand <- pizza %>% group_by(brand)
+mean_cal <- by_brand %>% summarise(m_cal = mean(cal))
+mean_cal <- mean_cal$m_cal
+for(i in 1:length(mean_cal))
+{
+  if(mean_cal[i] > total_cal_mean)
+  {
+    mean_cal[i] <- "red" # High cal
+  }
+  else
+  {
+    mean_cal[i] <- "blue" # Low cal
+  }
+}
+
+scatter_brand <- ggplot(pizza, aes(x=brand, y=sodium, color=cal)) +
+                 geom_point(alpha=0.5) +
+                 xlab('Brand') +
+                 ylab('Sodium level (gms)') +
+                 ggtitle('Visualization of sodium level in each brand along with calorie info') +
+                 theme_minimal() +
+                 theme(plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+                       panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+ggplot(data=pizza, aes(x=brand, y=sodium)) +
+geom_boxplot(fill=mean_cal, color=mean_cal, outlier.color='red', outlier.alpha=0.4,  outlier.shape=8) +
+#geom_jitter() + # This obfuscates important information
+stat_boxplot(geom='errorbar') +
+ggtitle(label='Boxplot of sodium level red - high calorie, blue - less than avg calorie') +
+ylab('sodium level (gms) dist') + 
+theme_minimal() +
+# guides(fill = guide_legend(override.aes = list(linetype = 0, shape='')) +
+theme(legend.position = 'right',
+      plot.title=element_text(family='', face='bold', colour='azure4', size=12),
+      panel.border=element_rect(color='burlywood4', fill=NA, size=2))
+
+# bplot_sod_brand
+scatter_brand
+# grid.arrange(bplot_sod_brand, scatter_brand, nrow=2 )
+```
 
 
 ### Question 8 
 **Outliers**  
-Use the `ezids::outlierKD2()` function to remove the outliers for sodium, then run the function again to remove outliers on calories. Re-do the QQ-plots for these two variables. Do you see much improvements?
+Use the `ezids::outlierKD2()` function to remove the outliers for sodium, then run the function again to remove outliers on calories. Re-do the QQ-plots for these two variables. Do you see much improvements?  
+  
+  
+```{r, results='hide', fig.dim=c(8, 9)}
+pizza.filtered1 <- ezids::outlierKD2(df=pizza, var=sodium, rm=T, boxplt=F, histogram=F, qqplt=F)
+pizza.filtered2 <- ezids::outlierKD2(df=pizza.filtered1, var=cal, rm=T, boxplt=F, histogram=F, qqplt=F)
+make_qqplot(pizza, c('sodium', 'cal'), pizza.filtered2)
+```
 
+  
+***Pizza with outliers to the left, and clean version to the right***
+In terms of improvements, I can only spot calorie to be approximately normal, whereas with sodium, there is a systematic departure from linearity.
