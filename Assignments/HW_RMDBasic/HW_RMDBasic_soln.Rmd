@@ -1,7 +1,7 @@
 ---
 title: "R - Assignment RMD Basic"
-author: "Your Name"
-date: "today??"
+author: "Sample Solution"
+date: "`r Sys.Date()`"
 output:
   html_document:
     code_folding: hide
@@ -31,6 +31,8 @@ knitr::opts_chunk$set(warning = F, results = "hide", message = F)
 # knitr::opts_chunk$set(echo = TRUE)
 options(scientific=T, digits = 3) 
 # options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
 ```
 
 ```{r}
@@ -42,7 +44,6 @@ options(scientific=T, digits = 3)
 # The submitted work should have this option selected instead.
 # 4. All charts/graphs/tables should have appropriate captions. 
 ```
-
 
 # HW - Module 2 week 03
 
@@ -98,52 +99,146 @@ xkabledplytail(baseball, 3, "The last 3 rows using `xkabledplytail` function." )
 ## Question 3. Header change
 **Change the headers/column names from Weight.pounds. to weight, from Height.inches. to height, and Age to age.**  
 
+Done. (No output.)   
+
+```{r}
+# You can use names or colnames to change column names like here. Also notice that "=" and "<-" are mostly the same as well.
+# colnames(baseball)[4] <- "height"
+colnames(baseball)[4:6]=c("height","weight","age")
+# The two lines above produces no output. To see the changes, use our head in the next question
+```
 
 ## Question 4. Head again
 **Print out the first two lines again to see the new column names.**  
+
+The first two rows are printed here.  
+
+```{r, results="asis"}
+xkabledplyhead(baseball, 2, "Columns renamed." )
+```
 
 
 
 ## Question 5. Summary
 **Find the statistics (summary) of the heights, weights, and ages of the players. Using complete sentences, give the reader these summary.**  
 
+The 5-number summary of height by itself (plus the mean) is (use inline R codes here, not just type in the number by hand) `r summary(baseball$height)`. The code-block format doesn't look too nice. You can try that yourself. 
+```{r, results='markup'}
+summary(baseball$height)
+```
+
+I would use the modified function in `ezids` (exclude the name columns): 
+```{r, results="asis"}
+xkablesummary(baseball[4:6], title = "Baseball players summary of selected statistics" )
+```
 
 
 ## Question 6. Subset
 **You should find an issue with the weight data with an NA value. Use the `subset( )` function, select that data point (save as shyboy) and find out who the shy boy was.**
 
-
+Using the `subset()` function, we found the shyboy:
+```{r, results="asis"}
+shyboy = subset(baseball, is.na(weight))
+xkabledplyhead(shyboy, 1, title = "Our shyboy" )
+```
 
 ## Question 7. Remove Shyboy
 **Remove shyboy from baseball, and then show the number of observations of the cleaned up dataframe baseball.**  
 
 
+```{r Q7, include=F}
+baseball = subset(baseball, weight>0) 
+```
+
+After removing the data point with invalid weight data, there are (again, use inline R codes here, not just type in the number by hand) `r length(baseball$height)`.
+
 
 ## Question 8. Boxplot
 **Make a quick boxplot of the weight of the players. Use the `title( )` function immediately to add a title to the chart. (Try color #0000FF for blue.)**  
 
+```{r Q8, echo=F}
+boxplot(baseball$weight, main="Baseball player weight boxplot", ylab="wieght (lbs)", col='#0000FF')
+```
+
+A quick glance from the plot suggest the weight distribution is kind of symmetric, other than a few outliers on the right tail.  
+
+We can also get into the habbit of making better plots using the `ggplot2::ggplot()` library/function. If it's some quick plots for our own use, the basic plots are good and quick. The ones from `ggplot2` gives you more control and better visual usually.
+
+```{r}
+loadPkg("ggplot2")
+ggplot(baseball, aes(y=weight)) + 
+  geom_boxplot() + 
+  geom_boxplot( colour="orange", fill="#7777cc", outlier.colour="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Baseball player weight boxplot using `ggplot`",x="", y = "weight (lbs)")
+```
 
 ## Question 9. Histogram
 **Make a histogram of the weight of the players. Try color 'green' this time. The function understands the word 'green' just fine. Give it a better title than the default. Does the distribution looks normal?**
+
+```{r Q9, echo=F}
+hist(baseball$weight, main="Histogram of baseball player weight", col = 'green' ) 
+```
+
+The histogram shows somewhat a normal-looking distribution, with a slight right-skew. 
+
+Just like before, we can use `ggplot2::ggplot()` to make this plot:
+
+```{r}
+ggplot(data=baseball, aes(weight)) + 
+  geom_histogram(breaks=seq(150, 300, by = 10), 
+                 col="red", 
+                 fill="green", 
+                 alpha = .7) + # opacity
+  labs(title="Baseball player weight histogram using `ggplot`") +
+  labs(x="weight (lbs)", y="Frequency") 
+```
 
 
 
 ## Question 10. Scatterplot
 **Use ggplot, make a plot with weights vs heights of the players, color by Teams. Give it an appropriate title.**  
 
+In all scientific literature, a graph is always referred as Y against X (y vs x). 
+Make sure you put "weights" on y as requested here.
 
+```{r Q10, echo=TRUE}
+# loadPkg("ggplot2")
+ggplot(data=baseball)+
+  geom_point(mapping = aes(x=height, y=weight, color=Team))+
+  ggtitle("Scatter plot of baseball player weigth(y, lbs) vs height(x, inches)")
+```
 
 ## Question 11. Plot by age
 **Make a plot with weights vs heights of the players, color by age.**
 
+I will use `ggplot()` here again. 
+```{r Q11, echo=F}
+ggplot(data=baseball)+
+  geom_point(mapping = aes(x=height, y=weight, color=age))+
+  ggtitle("Scatter plot of baseball player weigth(y, lbs) vs height(x, inches)")
+```
+
+Notice when colored sorted by a discrete variable `Team` (categorical, qualitative, nominal variable, in R, it is a factor level variable) and numeric `age` (numerical, quantitative, ratio level variable), the plot function handles them differently as you can see from the chart legend.
 
 
 ## Question 12. Team Washington
 **Obtain a subset of the data with only Team Washington. Using complete sentences, give the number of players in Team Washington.**
 
+```{r Q12, include=F}
+# There are others to subset. Whatever works for you is fine 
+teamwash <- subset(baseball,Team=='WAS')
+```
+
+We obtained the subset of players with `Team=='WAS'`, which results with `r length(teamwash$weight)` members in the team. 
 
 
 ## Question 13. Old Team Washington
 **Obtain another subset with Team Washington and only players older than 28. How many are there in this veteran group?**
+
+```{r}
+teamoldwash <- subset(baseball,Team=='WAS' & age > 28)
+```
+
+There are `r length(teamoldwash$weight)` in this category.  
 
 

@@ -1,0 +1,146 @@
+---
+title: "Confidence Intervals"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=F}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+```
+
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+# knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+# setup 
+Like we did before, let's load our data and create a dataframe call **mlb**, then take a look.
+
+```{r import_data, include=F}
+getwd()
+# mlb <- data.frame(read.csv("BaseballHeightWeight.csv", header = TRUE))
+mlb <- read.csv("BaseballHeightWeight.csv", header = TRUE)
+str(mlb)
+head(mlb)
+colnames(mlb)[4:6]=c("height","weight","age")
+# The line above produces no output. To see the changes, use str() or head()
+```
+
+Assume we already completed EDA. Let's look at confidence intervals now.
+
+
+## Confidence Interval / Z-Interval / T-Interval
+Let's try these inferential statistics tools that we learned:  
+z-interval  
+t-interval  
+
+```{r, include=F}
+mean.height = mean(mlb$height, na.rm = TRUE); 
+mean.weight = mean(mlb$weight, na.rm = TRUE); 
+```
+
+Before we do that, let us record again the mean height and weight for the entire mlb population. The mean height is mean.height = `r format(mean.height, digits=5)` inches, mean.weight = `r format(mean.weight, digits=5)` lbs. 
+
+Now let us create a smaller sample of the mlb players out of the entire population, and call it mlbsample.
+```{r mlbsample, include = F}
+set.seed(321) # just so that everyone have the same sample for comparison
+mlbsample = mlb[ sample(nrow(mlb),30), ]
+str(mlbsample)
+head(mlbsample)
+format(mean(mlbsample$height), digits=5)
+format(mean(mlbsample$weight, na.rm = TRUE), digits=5)
+```
+
+## Z-Interval Estimation (and Z-Test for next class)
+t-test and t-interval functions are standard in R, but z-test and z-interval turns out require other libraries. We use `BSDA` here.
+
+```{r z_test1}
+loadPkg("BSDA") # for z.test
+ztest95 = z.test(x=mlbsample$height, sigma.x = 2.31) # default conf.level = 0.95
+ztest95
+ztest99 = z.test(x=mlbsample$height, sigma.x = 2.31, conf.level=0.99 )
+ztest99
+ztest50 = z.test(x=mlbsample$height, sigma.x = 2.31, conf.level=0.50 )
+ztest50
+```
+
+Let us also take a look at the object "ztest99". It contains these info:
+```{r z_test2}
+names(ztest99)
+ztest99$conf.int
+# ztest99$alternative
+ztest99$estimate
+ztest99$statistic
+ztest99$method
+# etc etc
+```
+
+Now let us compare the three intervals, and note the actual average for the entire population is `r mean.height`.
+```{r z_test2b}
+mean.height
+ztest99$conf.int
+ztest95$conf.int
+ztest50$conf.int
+```
+
+## T-Intervals Estimation (and T-Test for next class)
+Similar for t-test, except it is **easier**, since we do not need to know the standard deviation (sigma) of 
+the population. First, the results for the default c=95% confidence level.
+```{r t_test}
+# t.test is included in the basic R package 'stats'
+ttest95 = t.test(x=mlbsample$height) # default conf.level = 0.95
+ttest95
+ttest99 = t.test(x=mlbsample$height, conf.level=0.99 )
+ttest99
+ttest50 = t.test(x=mlbsample$height, conf.level=0.50 )
+ttest50
+names(ttest99)
+ttest99$conf.int
+ttest99$alternative
+ttest99$estimate
+```
+
+
+Now let us compare the three intervals, with that produced from the z-test.
+```{r t_test2_99}
+mean.height
+ztest99$conf.int
+ttest99$conf.int
+```
+
+```{r t_test2_95}
+mean.height
+ztest95$conf.int
+ttest95$conf.int
+```
+
+```{r t_test2_50}
+mean.height
+ttest50$conf.int
+ztest50$conf.int
+```
+You can try the above for the weight data?
+
+
+
