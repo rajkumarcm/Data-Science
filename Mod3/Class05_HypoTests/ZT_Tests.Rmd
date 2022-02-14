@@ -1,0 +1,178 @@
+---
+title: "Hypothesis Testing"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+---
+
+```{r init, include=F}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+```
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# Hypothesis Testing
+
+We performed estimations (Z-intervals and T-intervals) in our last exercise. This time, we are performing hypothesis testings.
+
+## Preparation
+
+Continuing from last time where we found the Z- and T- intervals...
+
+```{r}
+getwd()
+# mlb <- data.frame(read.csv("BaseballHeightWeight.csv", header = TRUE))
+mlb <- read.csv("BaseballHeightWeight.csv", header = TRUE)
+str(mlb)
+head(mlb)
+colnames(mlb)[4:6]=c("height","weight","age")
+# The line above produces no output. To see the changes, use str() or head()
+```
+
+```{r results='markup'}
+xkabledplyhead(mlb)
+# xkabledplytail(mlb, 3)
+```
+
+Again, first take note of the mean height and weight for the entire mlb population is height: `r format(mean(mlb$height), digits=5)` inches, weight: `r format(mean(mlb$weight, na.rm = TRUE), digits=5)` lbs. Then redo what we had last time with Z- and T-intervals, but put in the appropriate null hypothesis for the Z- and T-tests.
+
+```{r}
+set.seed(123) # just so that everyone have the same sample for comparison
+mlbsample = mlb[ sample(nrow(mlb),30), ]
+str(mlbsample)
+head(mlbsample)
+format(mean(mlbsample$height), digits=4)
+format(mean(mlbsample$weight, na.rm = TRUE), digits=5)
+```
+
+## Z-Test
+
+So let's say we want to test is the mean height is 72.1 inches like last year as our null hypothesis $H_0: \mu = 72.1$ inches, which was the previous year's average. (Notice the use of latex inline formatting of mathematical typesetting, enclosed with a pair of dollar sign \$ \$ for the inline R-code.)
+
+```{r}
+loadPkg("BSDA") # for z.test
+ztest95_2tail = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31) # 
+ztest95_2tail
+ztest95_right = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative = "greater") # 
+ztest95_right
+# ztest99 = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, conf.level=0.99 )
+# ztest99
+# ztest50 = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, conf.level=0.50 )
+# ztest50
+```
+
+```{r results='markup'}
+# force this one result to always show, regardless of global settings
+ztest95_right
+```
+
+You can also try and see it for yourself, the optional argument for `conf.level=0.50` for example does not change the outcome for the p-value or the conclusion of the test. It only changes the confidence interval of the outcome.
+
+In cases that you want to determine the confidence Z-interval (estimation) and Z-test as well, you can do so by supplying the `conf.level` value in the function, and get both results in one step. Typically, you would want to set the conf.level for the interval to be 1 minus the $\alpha$ level for the test to obtain the appropriate corresponding results.
+
+Now let us try the left- and right-tailed tests
+
+```{r z_test3}
+ztestrighttail = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative = 'greater' )
+ztestrighttail  # p-value is small, reject null, adopt alternative mu is greater than 73.2
+ztest99lefttail = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative = 'less' )
+# ztest99lefttail  # p-value is large, fail to reject null, which is mu = 73.2 (or greater.)
+unloadPkg("BSDA")
+```
+
+```{r results='markup'}
+# force this one result to always show, regardless of global settings
+ztest99lefttail
+```
+
+In these cases, the Z-intervals produced are one-sided intervals, which we did not used before. But it is possible to create estimates of one-sided intervals.
+
+## T-Test
+
+Similar for t-test, except it is **easier**, since we do not need to know the standard deviation (sigma) of the population.
+
+```{r}
+# t.test is included in the basic R package 'stats'
+ttest95 = t.test(x=mlbsample$height, mu=72.1) # default conf.level = 0.95
+# t.test(x=mlb$height, mu=73.2, sigma.x = 2.18, conf.level=0.99 )
+ttest95
+ttest99 = t.test(x=mlbsample$height, mu=72.1, conf.level=0.99 )
+# ttest99
+names(ttest99)
+ttest99$conf.int
+ttest99$alternative
+ttest99$estimate
+```
+
+Again, we can check that the optional argument of `conf.level` here only affects the confidence interval result, but not the p-value.
+
+```{r results='markup'}
+# force this one result to always show, regardless of global settings
+ttest99
+```
+
+And here is the left- and right-tailed cases:
+
+```{r}
+ttestrighttail = t.test(x=mlbsample$height, mu=72.1, alternative = 'greater' ) # conf.level=0.99, 
+ttestrighttail  # p-value is small, reject null, adopt alternative mu is greater than 73.2
+ttestlefttail = t.test(x=mlbsample$height, mu=72.1, alternative = 'less' ) # conf.level=0.99, 
+# ttestlefttail  # p-value is large, fail to reject null, which is mu = 73.2 (or greater.)
+```
+
+```{r results='markup'}
+# force this one result to always show, regardless of global settings
+ttestlefttail
+```
+
+I have not found a good way to display these results in better format. For now, we'll just screen dump these onto the html.
+
+## Two-sample t-test
+
+Let us now try to use the two-sample t-test, which is a similar way of using the t-test, but on two different samples. First, create a different sample.
+
+```{r}
+set.seed(999) # just so that everyone have the same sample for comparison
+mlbsample2 = mlb[ sample(nrow(mlb),20), ]
+# compare the two samples
+format(mean(mlbsample2$height), digits=4)
+format(mean(mlbsample2$weight, na.rm = TRUE), digits=5)
+format(mean(mlbsample$height), digits=4)
+format(mean(mlbsample$weight, na.rm = TRUE), digits=5)
+```
+
+Next, perform the 2-sample t-test on height and weight
+
+```{r}
+ttest2sample_height = t.test(mlbsample$height,mlbsample2$height)
+ttest2sample_height
+ttest2sample_weight = t.test(mlbsample$weight,mlbsample2$weight)
+ttest2sample_weight
+```
+
+Notice that the two samples do not need to have the same sample size. Even at level of significance alpha set at = 0.50, we still fail to reject the null. The null hypothesis is that the two samples carry the same average.
+
+Imagine if we pull the two samples one from NBA players and one from WNBA players, do you expect a high or low p-value for the two-sample t-test?
+
+Now, you can try all the above for the weight data for practice.
