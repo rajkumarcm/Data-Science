@@ -1,0 +1,225 @@
+---
+title: "R Assignment - Pizza EDA"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r}
+# 1. Answer each question using in words/paragraph. 
+# 2. DO NOT use comments inside code blocks (like here) to answer anything. Those are for notes between 
+# coders/yourself. They will be ignored, and not counted as answers. 
+# 3. Keep the line/option    knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+# You can temporarily turn this on/off and use other option while you are working on the homework if it helps. 
+# The submitted work should have this option selected instead.
+# 4. All charts/graphs/tables should have appropriate captions. 
+# 5. You may want to use the ezids::outlierKD2 function to handle outliers
+# 6. Your grade is also determined by the style. Even if you answers everything correctly, but the html does not look appealing, you will NOT get the full credits. Pay attention to the details that we mentioned in class and in previous sample RMD files. How to use #, ##, ###, ..., bold face, italics, inline codes, LaTeX, tables, ...,  {results = "asis"}, single space vs two spaces at the end of line, ... , use of colors in plots/ggplots, and so forth.
+```
+
+
+# HW Assignment - EDA
+
+This pizza ingredient dataset is from data.world (@sdhilip) The variables are:  
+
+Variable | Definition  
+-----|------- 
+brand	 | Pizza brand
+id | ID
+mois | Amount of water per 100 grams in the sample
+prot | Amount of protein per 100 grams in the sample
+fat | Amount of fat per 100 grams in the sample
+ash | Amount of ash per 100 grams in the sample
+sodium | Amount of sodium per 100 grams in the sample
+carb | Amount of carbohydrates per 100 grams in the sample
+cal | Amount of calories per 100 grams in the sample
+
+As with all your work in this class, knit the RMD file into HTML, zip it with the RMD, and submit the zip file on Blackboard. 
+
+Compose your answers using inline R code instead of using the code-block output as much as you can. Coder's comments inside code blocks are never graded. 
+
+## Pizza Ingredient dataset
+
+### Question 1  
+**Import the dataset into R.**   
+
+**Answer**: The csv file is read in, as dataframe, and named "pizza". See codes from the toggle button.
+
+```{r}
+pizza = data.frame(read.csv("Pizza.csv"))
+```
+
+### Question 2  
+**How many data points are there?**  
+
+**Answer**: There are `r nrow(pizza)` observations in the dataset.
+
+
+### Question 3  
+**Look at the summary statistics of the dataset.**  
+
+**Answer**: The variable brand is not numeric, so it is not summarized in the following table.  
+```{r}
+xkablesummary(pizza[,2:9])
+```
+
+Notice that the `summary(pizza)` function right now only tells us `brand` is of character type, has a length of `r length(pizza$id)`.  If we 
+would like to get more information about `brand`, we can force the variable as a factor variable with the code:  
+`pizza$brand <- as.factor(pizza$brand)`  
+Then run the `summary(pizza)` function and the `str(pizza)` function, they now tell us there are 10 "levels" (i.e. 10 different values) in 
+`brand`, and the levels are H, D, J, B, F, etc.
+
+
+### Question 4 
+**Make Plots - 1**  
+For sodium and calorie, make histograms, boxplots (using `ggplot()`), and QQ-plots (just regular `qqnorm()` function). Make sure all plots have appropriate titles, x- and y- labels, units on the axes if applicable. It is also much nicer to add some color to your charts instead of plain old black and white. For chart titles, if no appropriate title you can think of, just use y vs x. Don’t get mixed up (somehow I find up to half of the presentations have the wrong ones). It is NEVER x vs y. **Always y vs x**.
+
+**Answer**: The charts for sodium and calories are shown below. (I used 
+the `gridExtra` library to make subplot areas to tabluate the plots. It 
+is optional.)
+
+```{r}
+loadPkg("ggplot2")
+loadPkg("gridExtra")
+
+# par(mfrow = c(1,2))
+# histogram for sodium
+histsodium <- ggplot(data=pizza, aes(sodium)) + 
+geom_histogram(col="red", 
+               fill="green", 
+               alpha = .7) + # opacity
+labs(title="Sodium histogram") +
+labs(x="Amt of sodium per 100 grams in  sample", y="Frequency") 
+
+# boxplot for sodium
+boxsodium <- ggplot(pizza, aes(y=sodium)) + 
+  geom_boxplot() + 
+  geom_boxplot( colour="blue", outlier.colour="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Boxplot of sodium level of pizza dataset",x="", y = "Sodium level")
+
+# histogram for calorie
+histcal <- ggplot(data=pizza, aes(cal)) + 
+geom_histogram(col="red", 
+               fill="blue", 
+               alpha = .7) + # opacity
+labs(title="Calorie histogram") +
+labs(x="Amt of calorie per 100 grams in  sample", y="Frequency") 
+# boxplot for calorie
+boxcal <- ggplot(pizza, aes(y=sodium)) + 
+  geom_boxplot() + 
+  geom_boxplot( colour="blue", outlier.colour="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Boxplot of sodium level of pizza dataset",x="", y = "Sodium level")
+
+grid.arrange(histsodium, histcal, boxsodium, boxcal, ncol=2, nrow=2)
+
+par(mfrow = c(1,2))
+qqnorm(pizza$sodium, main="Q-Q plot of sodium level of pizza dataset") 
+qqline(pizza$sodium)
+qqnorm(pizza$cal, main="Q-Q plot of calorie level of pizza dataset") 
+qqline(pizza$cal)
+
+unloadPkg("gridExtra")
+```
+
+
+### Question 5 
+**Make Plots - 2**  
+Making a scatterplot (using `ggplot()`), between sodium and calorie, color by the brand. As always, give the plot appropriate title, axis labels, and make it look good. 
+
+```{r}
+# loadPkg("ggplot2")
+ggplot(data=pizza)+
+  geom_point(mapping = aes(x=sodium, y=cal, color=brand))+
+  ggtitle("Scatter plot of Calorie content vs sodium for different pizza brands")+
+  labs(x="Sodium", y = "Calorie")
+```
+
+### Question 6 
+**Make Plots - 3**  
+Making another scatterplot (using `ggplot()`), between sodium and calorie, color by protein. What major difference do you see between this and the previous scatterplot? 
+
+```{r}
+# loadPkg("ggplot2")
+ggplot(data=pizza)+
+  geom_point(mapping = aes(x=sodium, y=cal, color=prot))+
+  ggtitle("Scatter plot of Calorie vs sodium for pizza with differnt protein content")+
+  labs(x="Sodium", y = "Calorie")
+```
+The main difference between this plot and the previous one is that when color 
+is determined by a categorical variable, it takes on discrete color palette, 
+while this latest one with an essentially continuous variable `prot` (protein) 
+being used, there is a smooth shade/gradation change of color, and it 
+automatically shows clearly in the chart legend. 
+
+### Question 7 
+**Make Plots - 4**  
+This time, make a plot with sodium as y, and brand as x. 
+(What kind of plot would you choose?)  
+
+Since `x` is a discrete variable, it basically is making plot of discrete 
+one-variable charts, typically boxplots.  We can use a few different variations 
+of plots to show similar results:  
+
+```{r}
+# This base R boxplot function can make a plot quick and easy, although not much customizable
+boxplot(sodium ~ brand, data = pizza)
+# The syntax for the formula is y ~ x
+```
+A nice plot can be obtained from `ggplot`.
+```{r}
+boxessodium <- ggplot(pizza, aes(y=sodium, x=brand)) + 
+  geom_boxplot() + 
+  geom_boxplot( colour="magenta", outlier.colour="blue", outlier.shape=8, outlier.size=4) +
+  labs(title="Boxplot of sodium level of pizza dataset",x="Brand", y = "Sodium level")
+boxessodium
+```
+
+```{r}
+
+```
+
+
+### Question 8 
+**Outliers**  
+Use the `ezids::outlierKD2()` function to remove the outliers for sodium, then run the function again to remove outliers on calories. Re-do the QQ-plots for these two variables. Do you see much improvements?  
+
+**Answer**:  
+```{r}
+pizzaCleanSodium = outlierKD2(pizza, sodium, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE) 
+pizzaCleanCal = outlierKD2(pizza,cal,TRUE, TRUE, TRUE, TRUE) # R syntax usually allows the arguments written with or without the equal signs
+```
+
+```{r}
+qqnorm(pizzaCleanSodium$sodium, main="Q-Q plot of sodium level \nwith outlier removed") 
+qqline(pizzaCleanSodium$sodium)
+```
+
+```{r}
+qqnorm(pizzaCleanCal$cal, main="Q-Q plot of calorie level \nwith outlier removed") 
+qqline(pizzaCleanCal$cal)
+```
+
+After the outliers were dropped, the QQ-plot for the calorie level seem to have improved a bit, indicating the distribution is closer to normal. The sodium case however is still far from being a straight line. Sometimes, if we still have a huge dataset remaining, we can run the outlier removal one more time to get rid of the new outliers. This could help further.   
+
