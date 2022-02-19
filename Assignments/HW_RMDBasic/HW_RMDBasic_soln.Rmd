@@ -1,5 +1,5 @@
 ---
-title: "R - Assignment Mod 2 Week 3"
+title: "R - Assignment RMD Basic"
 author: "Sample Solution"
 date: "`r Sys.Date()`"
 output:
