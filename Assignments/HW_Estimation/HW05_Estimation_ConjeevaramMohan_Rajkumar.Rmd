@@ -44,46 +44,225 @@ The variables in the dataset are:
 
 **After importing the dataset as Adata, check the structure. Make sure admit and rank are stored as factors, instead of numeric or integers. (Hint: Use as.factor() function or factor() function).**
 
-```{r}
+```{r, results='asis'}
+Adata <- read.csv(file='LogRegAdmit.csv',
+                  header=T,
+                  sep=',',
+                  fill=T,
+                  strip.white=T,
+                  blank.lines.skip=T,
+                  colClasses=c('admit'='factor', 'rank'='factor'))
+rmarkdown::paged_table(head(Adata, n=5))
 ```
-
-Answer answer answer. Lorem ipsum dolor sit amet...
-
 
 ### Question 2  
 **Construct t-intervals for the gre and gpa data for all applicants at 0.80 level and 0.99 level. **
+```{r}
+gre.mean <- mean(Adata$gre)
+gre.sd <- sd(Adata$gre)
+gpa.mean <- mean(Adata$gpa)
+gpa.sd <- sd(Adata$gpa)
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+n <- nrow(Adata)
+df <- n-1
+
+# I do understand we can throw in a list of probs, but I wish to do this way for
+# the sake of brevity.
+# For GRE 80% confidence
+gre.error80 <- qt(p=0.9, df=df) * gre.sd/sqrt(n)
+gre.min80 <- gre.mean - gre.error80
+gre.max80 <- gre.mean + gre.error80
+
+# For GRE 99% confidence
+gre.error90 <- qt(0.995, df=df) * gre.sd/sqrt(n)
+gre.min90 <- gre.mean - gre.error90
+gre.max90 <- gre.mean + gre.error90
+
+# For GPA 80% confidence
+gpa.error80 <- qt(p=0.9, df=df) * gpa.sd/sqrt(n)
+gpa.min80 <- gpa.mean - gpa.error80
+gpa.max80 <- gpa.mean + gpa.error80
+
+# For GPA 99% confidence
+gpa.error90 <- qt(0.995, df=df) * gpa.sd/sqrt(n)
+gpa.min90 <- gpa.mean - gpa.error90
+gpa.max90 <- gpa.mean + gpa.error90
+```
+Table:  
+
+Var|80% Min |80% Max |99% Min |99% Max
+-------|-------|-------|-------|-------
+GRE|`r gre.min80`|`r gre.max80`|`r gre.min90`|`r gre.max90`
+GPA|`r gpa.min80`|`r gpa.max80`|`r gpa.min90`|`r gpa.max90`
 
 
 ### Question 3  
 **Repeat the same calculation for gre in Question 2 but for admitted (1) and rejected (0) separately. (You can subset them first.) Between the admitted and rejected, does the two intervals overlap at 0.80 level? And at 0.99 level?**
+```{r}
+library(tidyverse)
+Adata.admitted <- Adata %>% filter(admit==1)
+Adata.rejected <- Adata %>% filter(admit==0)
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+# Admitted GRE
+admitted.gre.mean <- mean(Adata.admitted$gre)
+admitted.gre.sd <- sd(Adata.admitted$gre)
+admitted.n <- nrow(Adata.admitted)
+admitted.df <- admitted.n - 1
 
+admitted.gre.error80 <- qt(0.9, df=admitted.df) * admitted.gre.sd/sqrt(admitted.n)
+admitted.gre.min80 <- admitted.gre.mean - admitted.gre.error80
+admitted.gre.max80 <- admitted.gre.mean + admitted.gre.error80
+
+admitted.gre.error90 <- qt(0.995, df=admitted.df) * admitted.gre.sd/sqrt(admitted.n)
+admitted.gre.min90 <- admitted.gre.mean - admitted.gre.error90
+admitted.gre.max90 <- admitted.gre.mean + admitted.gre.error90
+
+# Rejected GRE
+rejected.gre.mean <- mean(Adata.rejected$gre)
+rejected.gre.sd <- sd(Adata.rejected$gre)
+rejected.n <- nrow(Adata.rejected)
+rejected.df <- rejected.n - 1
+
+rejected.gre.error80 <- qt(0.9, df=rejected.df) * rejected.gre.sd/sqrt(rejected.n)
+rejected.gre.min80 <- rejected.gre.mean - rejected.gre.error80
+rejected.gre.max80 <- rejected.gre.mean + rejected.gre.error80
+
+rejected.gre.error90 <- qt(0.995, df=rejected.df) * rejected.gre.sd/sqrt(rejected.n)
+rejected.gre.min90 <- rejected.gre.mean - rejected.gre.error90
+rejected.gre.max90 <- rejected.gre.mean + rejected.gre.error90
+```
+
+Table:  
+
+Var|80% Min |80% Max |99% Min |99% Max
+-------|-------|-------|-------|-------
+Admitted GRE|`r admitted.gre.min80`|`r admitted.gre.max80`|`r admitted.gre.min90`|`r admitted.gre.max90`
+Rejected GRE|`r rejected.gre.min80`|`r rejected.gre.max80`|`r rejected.gre.min90`|`r rejected.gre.max90`  
+
+There is no overlap between accepted and rejected sets at any level. 
 
 ### Question 4   
 **Make (box-) plots showing the gre distribution among applicants from different school rankings for the admitted and rejected separately. Please use ggplot for this. The x-variable should be rank, and the y-variable should be gre.**
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+```{r}
+ggplot(Adata.admitted, aes(x=rank, y=gre)) +
+geom_boxplot(aes(fill=rank), alpha=0.4, outlier.color='red', outlier.alpha=0.5, outlier.size=4.2) +
+  geom_jitter(color='blue', alpha=0.5)+
+stat_boxplot(geom ='errorbar')+
+xlab('School rank') +
+ylab('GRE distribution') +
+ggtitle('GRE distribution by different school rank (Accepted)')
 
+ggplot(Adata.rejected, aes(x=rank, y=gre)) +
+geom_boxplot(aes(fill=rank), alpha=0.4, outlier.color='red', outlier.alpha=0.5, outlier.size=4.2) +
+  geom_jitter(color='blue', alpha=0.5)+
+stat_boxplot(geom ='errorbar')+
+xlab('School rank') +
+ylab('GRE distribution') +
+ggtitle('GRE distribution by different school rank (Rejected)')
+```
 
 ### Question 5   
 **Repeat Question 2 and Question 3 for gpa. Do the two groups have t-intervals overlap at 0.80 level? At 0.99 level?**
+```{r}
+# Admitted
+admitted.gpa.mean <- mean(Adata.admitted$gpa)
+admitted.gpa.sd <- sd(Adata.admitted$gpa)
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+# 80% Confidence
+admitted.gpa.error80 <- qt(0.9, df=admitted.df) * admitted.gpa.sd/sqrt(admitted.n)
+admitted.gpa.min80 <- admitted.gpa.mean - admitted.gpa.error80
+admitted.gpa.max80 <- admitted.gpa.mean + admitted.gpa.error80
 
+# 99% Confidence
+admitted.gpa.error99 <- qt(0.995, df=admitted.df) * admitted.gpa.sd/sqrt(admitted.n)
+admitted.gpa.min99 <- admitted.gpa.mean - admitted.gpa.error99
+admitted.gpa.max99 <- admitted.gpa.mean + admitted.gpa.error99
+
+# Rejected
+# 80% Confidence
+rejected.gpa.mean <- mean(Adata.rejected$gpa)
+rejected.gpa.sd <- sd(Adata.rejected$gpa)
+
+# 80% Confidence
+rejected.gpa.error80 <- qt(0.9, df=rejected.df) * rejected.gpa.sd/sqrt(rejected.n)
+rejected.gpa.min80 <- rejected.gpa.mean - rejected.gpa.error80
+rejected.gpa.max80 <- rejected.gpa.mean + rejected.gpa.error80
+
+# 99% Confidence
+rejected.gpa.error99 <- qt(0.995, df=rejected.df) * rejected.gpa.sd/sqrt(rejected.n)
+rejected.gpa.min99 <- rejected.gpa.mean - rejected.gpa.error99
+rejected.gpa.max99 <- rejected.gpa.mean + rejected.gpa.error99
+
+```
+
+Table:  
+
+Var|80% Min|80% Max|99% Min|99% Max
+-------|-------|-------|-------|-------
+Admitted GPA|`r admitted.gpa.min80`|`r admitted.gpa.max80`|`r admitted.gpa.min99`|`r admitted.gpa.max99`
+Rejected GPA|`r rejected.gpa.min80`|`r rejected.gpa.max80`|`r rejected.gpa.min99`|`r rejected.gpa.max99`  
+
+There is no overlap between accepted and rejected sets at any level.   
 
 ### Question 6   
 **Repeat Question 4 for gpa. Make (box-) plots showing the gpa distribution among applicants from different school rankings for the admitted and rejected separately. Again, use ggplot.**
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+```{r}
+library(ggiraph)
+ggplot(Adata.admitted, aes(x=rank, y=gpa)) +
+geom_boxplot(aes(fill=rank), alpha=0.4, outlier.color='red', outlier.alpha=0.5, outlier.size=4.2) +
+geom_jitter(color='blue', alpha=0.5)+
+stat_boxplot(geom ='errorbar')+
+xlab('School rank') +
+ylab('GPA distribution') +
+ggtitle('GPA distribution by different school rank (Accepted)')
+
+
+ggplot(Adata.rejected, aes(x=rank, y=gpa)) +
+geom_boxplot(aes(fill=rank), alpha=0.4, outlier.color='red', outlier.alpha=0.5, outlier.size=4.2) +
+  geom_jitter(color='blue', alpha=0.5)+
+stat_boxplot(geom ='errorbar')+
+xlab('School rank') +
+ylab('GPA distribution') +
+ggtitle('GPA distribution by different school rank (Rejected)')
+```
 
 
 ### Question 7  
 **As EDA from the charts and the t-interval calculations you produced, do you observe any potential effects between gre/gpa/rank on admissions? Explain briefly. **
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+I wish to also add this plot, which I believe would add more information while drawing conclusion.  
+```{r}
+
+rank1 <- Adata %>% filter(rank==1)
+rank2 <- Adata %>% filter(rank==2)
+rank3 <- Adata %>% filter(rank==3)
+rank4 <- Adata %>% filter(rank==4)
+
+make_plot = function(x, label)
+{
+  p <- ggplot(x, aes(x=gre, y=gpa, color=admit))+
+       geom_point()+
+       xlab('GRE')+
+       ylab('GPA')+
+       ggtitle(label)
+  return(p)
+}
+
+p1 <- make_plot(rank1, 'rank1')
+p2 <- make_plot(rank2, 'rank2')
+p3 <- make_plot(rank3, 'rank3')
+p4 <- make_plot(rank4, 'rank4')
+
+library(gridExtra)
+grid.arrange(p1, p2, p3, p4, nrow=2)
+
+```
+
+Generally speaking, all t-interval indicate for admitted candidates, the lower bound at 0.8 level is higher compared to those who were rejected. It appears boxplots support the hypothesis by having the second quartile relatively higher compared to those who were rejected.  
+
+However, after thoroughly looking at the scatter points in the boxplots and from the above figure, it appears that many candidates who still had achieved high GPA, and GRE scores were not offered a place. This underlines the fact that the admissions process involves considering several factors that weren't included in the data set such as the Letters of recommendation, publications, professional exposure, along with the marks for making a decision instead of GPA, and GRE being the sole factors.
 
 
 
