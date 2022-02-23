@@ -50,4 +50,6 @@ Icon?
 *.code-workspace
 .vscode/*
 
-
+# Ignore zip files
+*.zip
+*.Rproj
