@@ -127,7 +127,7 @@ geom_histogram(col="red",
 labs(title="Calorie histogram") +
 labs(x="Amt of calorie per 100 grams in  sample", y="Frequency") 
 # boxplot for calorie
-boxcal <- ggplot(pizza, aes(y=sodium)) + 
+boxcal <- ggplot(pizza, aes(y=cal)) + 
   geom_boxplot() + 
   geom_boxplot( colour="blue", outlier.colour="red", outlier.shape=8, outlier.size=4) +
   labs(title="Boxplot of sodium level of pizza dataset",x="", y = "Sodium level")
