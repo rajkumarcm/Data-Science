@@ -1,0 +1,309 @@
+---
+title: "Linear Model LM - part I"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+# knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+```
+
+```{r base_lib}
+loadPkg("ggplot2")
+```
+
+# Regression 
+## Faraway::stat500 Dataset
+
+Let us run some simple linear model:
+```{r}
+#For this example we are going to use data from the faraway library from the package with the same name.
+loadPkg("faraway")
+#The data set is stat500, so let's take a look
+str(stat500)
+#Determine whether midterm and homework grades predict the final
+model.final <- lm(final~midterm+hw,data=stat500)
+summary(model.final)
+```
+
+The code above does not output to html by our choice. To display the model summary, we'll use the function `ezids::xkabledply( )`. The function can also take a generic table and display it, as you can see from the definition/help menu.  
+```{r, results='markup'}
+xkabledply(model.final, title = "stat500 Model summary: final~midterm+hw")
+```
+
+From looking at the parts (attributes) in the model object `model.final`, we can pull out different parts if needed. For example, the basic display of some of the info is given here (hidden in html output).  
+
+```{r, results='markup'}
+model.final$coefficients
+model.final$call
+model.final$model$final
+```
+
+The first model call is `r format(summary(model.final)$call)`.
+
+The coefficients and the p-values are found to be  
+intercept: `r format( model.final$coefficients['(Intercept)'] )` (p: `r format( summary(model.final)$coefficients[,4]['(Intercept)'] )`)  
+midterm: `r format( model.final$coefficients['midterm'] )` (p: `r format( summary(model.final)$coefficients[,4]['midterm'] )`)  
+hw: `r format( model.final$coefficients['hw'] )` (p: `r format( summary(model.final)$coefficients[,4]['hw'] )`).  
+The adjusted r^2^ of the model is `r format( summary(model.final)$adj.r.squared )`.
+
+Notice that in the RMD inline codes above, the coefficients are part of the attributes of the model object `model.final`. But the p-values are not stored directly in that object. Rather it is calculated by the standard `summary( )` function, which results in a complicated summary-object. The p-values are part of this summary-object. Similarly, the r^2^ value of the model is not stored directly in the model object, but in the summary-object.
+
+So find out more about how the model-object and the model-summary-object are structured, we can inspect them from the environment pane, or we can use the basic function `str( )`. (Not shown in html. Run codes locally to see the results.)  
+```{r}
+str(model.final)
+str(summary(model.final))
+```
+
+There are other higher level functions such as `stat::coef( )` and `stat::confint( )`, which takes the info from a model-object and extract out important and helpful information. 
+
+```{r results='markup'}
+coef(model.final)
+# equivalent to
+# model.final$coefficients
+
+confint(model.final)
+```
+
+We can use these inline like these:  
+The coefficients and the p-values are found to be  
+intercept: `r coef(model.final)['(Intercept)'] ` (interval: [`r format( confint(model.final)[1,] )`])  
+midterm: `r coef(model.final)['midterm'] ` (interval: [`r format( confint(model.final)[2,] )`])  
+hw: `r coef(model.final)['hw'] ` (interval: [`r format( confint(model.final)[3,] )`]).  
+
+### Effect of scaling on LM
+
+Negative. Let us try scale up/down the numerical values of the predictors. (Again, results not shown in html. Run codes locally to see result.)  
+
+```{r}
+stat500s = stat500
+stat500s$midterm = stat500$midterm * 1000000
+stat500s$hw = stat500$hw / 1000000
+#Determine whether midterm and homework grades predict the final
+modelscaled.final <- lm(final~midterm+hw,data=stat500s)
+summary(modelscaled.final)
+coef(modelscaled.final)
+confint(modelscaled.final)
+```
+
+The resulting model as expected will have the coefficients scaled the same way, while the significance of the coefficients are unaffected. Note that while scaling seems to have no important effect here in the final model, other algorithms (such as ridge/lasso regressions and other techniques that we will learn later) can be strongly affected by the scales. As such, a lof of times, we would like to scale the values to z-scores before performing linear regressions.
+
+We can also add the results of our predictions to the dataframe
+```{r}
+#Data grid is a function inside the grid package that is a useful tool for creating graphics
+loadPkg("modelr")
+df.with.predfin.from.model <- add_predictions(stat500,model.final)
+head(df.with.predfin.from.model)
+loadPkg("ggplot2")
+ggplot(df.with.predfin.from.model,aes(final,pred))+geom_point(aes(final,pred))+geom_line(aes(pred), colour="red", size=1)
+```
+
+```{r}
+# We can also add the residuals 
+df.with.predfin.from.model <- add_residuals(df.with.predfin.from.model,model.final)
+head(df.with.predfin.from.model)
+# ggplot(df.with.predfin.from.model, aes(resid))+geom_freqpoly(binwidth=.05)
+ggplot(df.with.predfin.from.model,aes(final,resid))+geom_point(aes(final,resid))
+```
+
+We can also use a few simple functions from the broom package
+```{r}
+loadPkg("broom")
+#tidy will create a dataframe of our results
+tidyfinal <-  tidy(model.final)
+tidyfinal
+#augment will add the model output
+Model_Summary <- augment(model.final)
+str(Model_Summary)
+head(Model_Summary)
+```
+
+
+We can also use the formula with predict, to well predict future values (according to th e linear model)  
+
+```{r}
+loadPkg("stats")
+predict(model.final,data.frame(midterm=c(25,52,78),hw=c(20,80,45)))
+```
+
+## MtCars Dataset
+
+Next, let us look at the mtcars (Motor Cars) dataset.
+
+### Variance Inflation Factor VIF
+
+The Variance Inflation Factor VIF is a measure about how good/bad two regressors (*x*-variables) are correlated to others. The definition for the vif of a variable $k$ is given by  
+vif<sub>k</sub> $= \frac{1}{1-R^2_k}$  
+where $R^2_k$ is the coefficient of determination for the variable $k$.
+
+Typically, the rule of thumb is:  
+Perfect : vif = 1   
+Great : 1 < vif < 5  
+Okay : 5 < vif < 10  
+Reject : vif > 10  
+
+There are different libraries equipped with the vif function, such as `faraway`, `rms`, and `car`. The last one `car::vif( )` requires two or more variables in the models, otherwise an error occurs. Of course, if only 1 variable, the result is trivial (always 1) to begin with.
+
+Use the `ezids::xkablevif( )` function (with a model-object as the argument of the function) to display the vif values.  
+
+### Correlation Matrix
+
+```{r mtcars}
+summary(mtcars)
+```
+
+```{r view_mtcars}
+str(mtcars)
+head(mtcars)
+mtcarscor = cor(mtcars) # get the correlation matrix between all numerical variables.
+mtcarscor
+```
+
+```{r results='markup'}
+xkabledply(mtcarscor)
+```
+
+The correlation matrix is hard to read, especially for too many variables. We can use some other packages to help. First, we can try the library `corrplot`.
+
+```{r }
+loadPkg("corrplot")
+```
+
+```{r include=T, warning=F}
+corrplot(mtcarscor)
+```
+
+```{r warning=F}
+corrplot(mtcarscor, method = "square") # try "circle", "square", "ellipse", "number", "shade", "color", "pie"
+```
+```{r warning=F}
+corrplot(mtcarscor, method = "number")
+```
+```{r warning=F}
+corrplot(mtcarscor, method = "number", type="upper")
+```
+```{r warning=F}
+corrplot.mixed(mtcarscor)
+```
+
+We can also use the library `lattice` to help see these correlations...  
+```{r lattice}
+loadPkg("lattice") # lattice and ggplot2 combined allow us to use the "pairs" function below 
+```
+
+```{r lattice_pairs}
+pairs(mtcars[1:10])
+```
+
+So now, let us see if we can try to build a model to predict the mpg (miles per gallon) of a vehicle. (Results hidden in html.)
+```{r model1}
+fit1 <- lm(mpg ~ wt, data = mtcars)
+summary(fit1)
+# vif(fit1)
+```
+
+Use the `xkabledply( )` function to display it.
+```{r results='markup'}
+xkabledply(fit1, title = paste("Model :", format(formula(fit1)) ) )
+```
+
+A standard plot function gives us a bunch of plots.
+```{r model1b}
+plot(fit1)
+```
+
+We can also check the correlation test between the two variables, essentially checking whether the confidence interval of the correlation r is including zero. (I have not found a better way to display the `cor.test` results.)
+```{r cor_test, results='markup'}
+cor.test(mtcars$mpg, mtcars$wt) -> cortest
+cortest
+```
+
+```{r results='markup'}
+fit2 <- lm(mpg ~ wt+disp, data = mtcars)
+xkabledply(fit2, title = paste("Model :", format(formula(fit2)) ) )
+xkablevif(fit2)
+```
+
+```{r model2b}
+plot(fit2)
+```
+
+```{r results='markup'}
+fit3 <- lm(mpg ~ wt+disp+cyl, data = mtcars)
+xkabledply(fit3, title = paste("Model :", format(formula(fit3)) ) )
+xkablevif(fit3)
+```
+
+```{r model3b}
+plot(fit3)
+```
+
+```{r results='markup'}
+fit4 <- lm(mpg ~ wt+disp+cyl+hp, data = mtcars)
+xkabledply(fit4, title = paste("Model :", format(formula(fit4)) ) )
+xkablevif(fit4)
+```
+
+```{r model4b}
+plot(fit4)
+```
+
+### Summary of the four LMs
+
+We can summarize the results here. (Also see the contrast between the first two rows where I used the default r^2^ in markdown, and $r^2$ with $\LaTeX$.)  
+
+Model  | 1 : `r format(formula(fit1))` | 2 : `r format(formula(fit2))` | 3 : `r format(formula(fit3))` | 4 : `r format(formula(fit4))` |  
+:--|:----|:-----|:------|:-------|  
+r^2^  | `r summary(fit1)$r.squared ` | `r summary(fit2)$r.squared ` | `r summary(fit3)$r.squared ` | `r summary(fit4)$r.squared `|  
+Adj $r^2$  | `r summary(fit1)$adj.r.squared ` | `r summary(fit2)$adj.r.squared ` | `r summary(fit3)$adj.r.squared ` | `r summary(fit4)$adj.r.squared `|  
+wt | `r fit1$coefficients['wt'] ` (vif: `r vif(fit1)['wt']`) | `r fit2$coefficients['wt'] ` (vif: `r vif(fit2)['wt']`) | `r fit3$coefficients['wt'] ` (vif: `r vif(fit3)['wt']`) | `r fit4$coefficients['wt'] ` (vif: `r vif(fit4)['wt']`) |  
+| | p:`r format( summary(fit1)$coefficients[,4]['wt'], digits=2) ` | p:`r summary(fit2)$coefficients[,4]['wt'] ` | p:`r summary(fit3)$coefficients[,4]['wt'] ` | p:`r format( summary(fit4)$coefficients[,4]['wt']) `|
+disp | | `r format( fit2$coefficients['disp'] ) ` (vif: `r vif(fit2)['disp']`) | `r format( fit3$coefficients['disp'] ) ` (vif: `r vif(fit3)['disp']`) | `r fit4$coefficients['disp'] ` (vif: `r vif(fit4)['disp']`) |  
+| | | p:`r summary(fit2)$coefficients[,4]['disp'] ` | p:`r summary(fit3)$coefficients[,4]['disp']` | p:`r summary(fit4)$coefficients[,4]['disp']` |  
+cyl | | | `r fit3$coefficients['cyl']` (vif: `r vif(fit3)['cyl']`) | `r fit4$coefficients['cyl']` (vif: `r vif(fit4)['cyl']`) |  
+| | | | p:`r summary(fit3)$coefficients[,4]['cyl'] ` | p:`r summary(fit4)$coefficients[,4]['cyl'] ` |  
+hp | | || `r fit4$coefficients['hp']` (vif: `r vif(fit4)['hp']`)|  
+| | | || p:`r summary(fit4)$coefficients[,4]['hp'] `|
+
+
+We learned how to use ANOVA to test mean values (quantitative variable) of different samples. We can actually also use ANOVA to compare linear models. 
+Notice that the R function `aov()` internally calls the `lm()` function, and produces a model. 
+If you look at the object created by `aov()`, it has a `lm()` model object part. 
+We can then use the function `anova()` (both `aov()` and `anova()` are in the R stats library) to analyse the models. (Run the code block locally to see the results.)
+
+```{r modelanova}
+anova(fit1,fit2,fit3,fit4) -> anovaRes
+anovaRes
+str(anovaRes)
+```
+
+The `anova( )` function returns an object that is essentially a table/dataframe. You can use the `xkabledply( )` function to display it.  
+```{r results='markup'}
+xkabledply(anovaRes, title = "ANOVA comparison between the models")
+```
+
+The table shows the step-by-step Residual DF, Residual SS, as well as *REDUCTION* in DF and Sum of Sq. The last two columns show the F-Statistics and p-values of the anova test (between the current and previous rows). 
+
+
