@@ -1,0 +1,203 @@
+---
+title: "R Assignment - Estimation"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# HW Assignment - Estimation 
+
+This exercise uses the graduate school admissions dataset from the applicants to a higher-ed institute. The dataset is LogRegAdmit.csv.  
+The variables in the dataset are:  
+
+* `admit`: 0 or 1 (False or True)
+* `gre`: gre score
+* `gpa`: grade point average at undergraduate level
+* `rank`: the ranking of the applicant's undergraduate institute, 1, 2, 3, or 4
+
+
+## Grad School Admissions
+
+### Question 1  
+**After importing the dataset as Adata, check the structure. Make sure admit and rank are stored as factors, instead of numeric or integers. (Hint: Use `as.factor()` function or `factor()` function).**
+
+```{r q01}
+Adata <- data.frame(read.csv("LogRegAdmit.csv"))
+Adata
+Adata$admit <- as.factor(Adata$admit)
+Adata$rank <- as.factor(Adata$rank)
+Adata
+```
+
+The data set was read in, and saved as Adata. The variables admit and rank are stored as int. We would like to convert them to categorical for subsequent analysis. The conversion is performed with the function `as.factor()`.
+
+### Question 2  
+**Construct t-intervals for the gre data for all applicants at 0.80 level and 0.99 level. **
+
+```{r q02}
+tinterval.gre.c80 = t.test(x=Adata$gre, conf.level=0.80)
+tinterval.gre.c80
+tinterval.gre.c99 = t.test(x=Adata$gre, conf.level=0.99)
+tinterval.gre.c99
+```
+
+The mean gre score is `r format(mean(Adata$gre),digits=5)`.  The t-intervals are as follows:
+
+* The confidence interval on gre at 0.80 level is [`r format(tinterval.gre.c80$conf.int,digits=5)`].
+* The confidence interval on gre at 0.99 level is [`r format(tinterval.gre.c99$conf.int,digits=5)`].
+
+### Question 3  
+**Repeat the same calculation for gre in Question 2 but for admitted (1) and rejected (0) separately. (You can subset them first.) Between the admitted and rejected, does the two intervals overlap at 0.80 level? And at 0.99 level?**
+
+```{r Q2}
+admitted <- subset(Adata,admit==1)
+rejected <- subset(Adata,admit==0)
+
+tinterval.gre.c80.rej = t.test(x=rejected$gre, conf.level=0.80)
+tinterval.gre.c80.rej
+tinterval.gre.c99.rej = t.test(x=rejected$gre, conf.level=0.99)
+tinterval.gre.c99.rej
+
+tinterval.gre.c80.adm = t.test(x=admitted$gre, conf.level=0.80)
+tinterval.gre.c80.adm
+tinterval.gre.c99.adm = t.test(x=admitted$gre, conf.level=0.99)
+tinterval.gre.c99.adm
+```
+
+The various t-Intervals are summarized in the following table:
+
+***
+Variable |      Status          | level 0.80 | level 0.99 |
+---------|----------------------|------------|------------|
+GRE      | admit = 0 (rejected) | [`r format(tinterval.gre.c80.rej$conf.int,digits=5)`] | [`r format(tinterval.gre.c99.rej$conf.int,digits=5)`] |
+GRE      | admit = 1 (admitted) | [`r format(tinterval.gre.c80.adm$conf.int,digits=5)`] | [`r format(tinterval.gre.c99.adm$conf.int,digits=5)`] ||
+***
+
+At 0.80 level, the two t-intervals between the rejected and admitted group are clearly separated. At 0.99 level, they are almost touching each other. It is clear that the admitted group has higher overall GRE scores. 
+
+### Question 4  
+**Make (box-) plots showing the gre distribution among applicants from different school rankings for the admitted and rejected separately. Please use ggplot for this. The *x*-variable should be rank, and the $y$-variable should be gre.**
+
+We can first try using the plot function `plot()` in the base R library.
+
+```{r q04a}
+boxplot(gre~rank,data=admitted,main="GRE Distribution vs School Rankings - Admitted", xlab="School Rankings", ylab="GRE", col=c("#ff0000","#11cc11","#0000ff","#ff00ff"))
+boxplot(gre~rank,data=rejected,main="GRE Distribution vs School Rankings - Rejected", xlab="School Rankings", ylab="GRE", col=c("#ff0000","#11cc11","#0000ff","#ff00ff"))
+```
+
+Let us also try using `ggplot()`:
+
+```{r q04b}
+loadPkg("ggplot2")
+ggplot(admitted, aes(x=rank, y=gre, fill=rank)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff","#ff00ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="GRE Distribution vs School Rankings - Admitted", x="School Rankings", y = "GRE")
+```
+```{r q04c}
+loadPkg("ggplot2")
+ggplot(rejected, aes(x=rank, y=gre, fill=rank)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff","#ff00ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="GRE Distribution vs School Rankings - Rejected", x="School Rankings", y = "GRE")
+```
+
+
+### Question 5  
+**Repeat Question 2 and Question 3 for gpa. Do the two groups have t-intervals overlap at 0.80 level? At 0.99 level?**
+
+First, let us calculate the gpa confidence intervals for the entire group as in Question 2:  
+```{r q05a}
+tinterval.gpa.c80 = t.test(x=Adata$gpa, conf.level=0.80)
+tinterval.gpa.c80
+tinterval.gpa.c99 = t.test(x=Adata$gpa, conf.level=0.99)
+tinterval.gpa.c99
+```
+
+The mean gpa is `r mean(Adata$gpa)`.  The t-intervals are as follows:
+
+* The confidence interval on gpa at 0.80 level is [`r format(tinterval.gpa.c80$conf.int)`].
+* The confidence interval on gpa at 0.99 level is [`r format(tinterval.gpa.c99$conf.int)`].  
+
+Next, as in Question 3, let us calculate the intervals for the rejected and admitted subgroups:  
+```{r Q5b}
+admitted <- subset(Adata,admit==1)
+rejected <- subset(Adata,admit==0)
+
+tinterval.gpa.c80.rej = t.test(x=rejected$gpa, conf.level=0.80)
+tinterval.gpa.c80.rej
+tinterval.gpa.c99.rej = t.test(x=rejected$gpa, conf.level=0.99)
+tinterval.gpa.c99.rej
+
+tinterval.gpa.c80.adm = t.test(x=admitted$gpa, conf.level=0.80)
+tinterval.gpa.c80.adm
+tinterval.gpa.c99.adm = t.test(x=admitted$gpa, conf.level=0.99)
+tinterval.gpa.c99.adm
+```
+
+The various t-Intervals are summarized in the following table:
+
+***
+Variable |      Status          | level 0.80 | level 0.99 |
+---------|----------------------|------------|------------|
+GPA      | admit = 0 (rejected) | [`r format(tinterval.gpa.c80.rej$conf.int)`] | [`r format(tinterval.gpa.c99.rej$conf.int)`] |
+GPA      | admit = 1 (admitted) | [`r format(tinterval.gpa.c80.adm$conf.int)`] | [`r format(tinterval.gpa.c99.adm$conf.int)`] ||
+***
+
+Similar to gre, at 0.80 level, the two t-intervals between the rejected and admitted group are clearly separated. At 0.99 level, they are almost touching each other. It is clear that the admitted group has higher overall GPA scores as well. 
+
+
+### Question 6  
+**Repeat Question 4 for gpa. Make (box-) plots showing the gpa distribution among applicants from different school rankings for the admitted and rejected separately. Again, use ggplot.**
+
+Below is the boxplots using `ggplot()`:
+
+```{r q06a}
+# loadPkg("ggplot2")
+ggplot(admitted, aes(x=rank, y=gpa, fill=rank)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff","#ff00ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="GPA Distribution vs School Rankings - Admitted", x="School Rankings", y = "GPA")
+```
+
+```{r q06b}
+# loadPkg("ggplot2")
+ggplot(rejected, aes(x=rank, y=gpa, fill=rank)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff","#ff00ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="GPA Distribution vs School Rankings - Rejected", x="School Rankings", y = "GPA")
+```
+
+### Question 7  
+**As EDA from the charts and the t-interval calculations you produced, do you observe any potential effects between gre/gpa/rank on admissions? Explain briefly. **
+
+It seems clear from the fact that the confidence intervals (both at 0.99 and 0.80 levels) of the admitted group is higher than the rejected group without overlap (both GRE and GPA), they have an significant effect on being admitted or not. See results from question 3.
+
+The boxplots of GRE  with different school ranking also shows a slight decrease in GRE and GPA scores when the rank varies from rank 1 to rank 4. This suggests applicants from rank 4 schools are performing a little worse academically in the standardized test GRE.
+This can have a confounding effect on the chance of being admitted to graduate school according to this dataset. 
+
+GPA is a slightly different story. There is no clear trend of an effect of overall GPA by school ranking. If anything, rank 3 schools tend to give best grades to their students. We should not be surprised to learn if admissions do not depend all that much on GPA.
+
+
+
+
+
+
