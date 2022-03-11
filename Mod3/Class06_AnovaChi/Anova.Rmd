@@ -1,0 +1,153 @@
+---
+title: "(One-way) Anova test"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=F}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+```
+
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+# ANOVA Test
+
+Let's try what we learned:
+
+## Example 1 `MASS::Survey`
+
+We used the `MASS::Survey` dataset and tried running the $\chi^2$ test. Notice that we used `Smoke` (habit) and `Exercise` (level) in that test, where both variables are categorical. In ANOVA, however, we need one categorical variable (usually different samples as the variable) and one numerical variable. In this dataset, we can use `Pulse` rate as that numerical $y$.
+
+### Chart
+
+```{r}
+loadPkg("MASS")
+surveyPulseSmoke = subset(survey, Pulse>0 & !is.na(Smoke), select=c('Pulse','Smoke'))  # remove NAs
+loadPkg("ggplot2")
+ggplot(surveyPulseSmoke, aes(x=Smoke, y=Pulse)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff","#ff00ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="Pulse Rate for MASS data with different Smoke Habits", x="Smoke Habit", y = "Pulse rate")
+
+#plot(Pulse ~ Smoke, data=surveyPulseSmoke , main="Pulse Rate for MASS data with different Smoke Habits", col=c("#ff0000","#00ff00","#0000ff","#ff00ff") )
+```
+
+### ANOVA Test
+
+```{r aov, results='asis'}
+anovaRes = aov(Pulse ~ Smoke, data=surveyPulseSmoke)
+# This is the standard R-notation of entering an equation, y ~ x
+# We will learn and use this more as it goes on.
+anovaRes  # this does not give the easy-to-read result of the aov analysis
+# Use the summary function instead.
+# summary(anovaRes) # better yet, use the xkabledply() function.
+names(anovaRes)
+```
+
+```{r}
+xkabledply(anovaRes, title = "ANOVA result summary")
+```
+
+Let us have a do-over. The above charts are good, but could be better!! The variable "Smoke" is registered as factor, but it should be ordinal. Let us add the proper order to the variable and re-do the chart.
+
+### Better Chart
+
+```{r aov_re-do, include=T}
+# str(surveyPulseSmoke)
+surveyPulseSmoke$Smoke <- factor(surveyPulseSmoke$Smoke, order=T, levels = c("Never","Occas","Regul","Heavy"))
+# str(surveyPulseSmoke)
+loadPkg("ggplot2")
+ggplot(surveyPulseSmoke, aes(x=Smoke, y=Pulse)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff","#ff00ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="Pulse Rate for MASS data with different Smoke Habits", x="Smoke Habit", y = "Pulse rate")
+
+#plot(Pulse ~ Smoke, data=surveyPulseSmoke , main="Pulse Rate for MASS data with different Smoke Habits", col=c("#00ff00","#0000ff","#ff00ff","#ff0000") )
+anovaRes = aov(Pulse ~ Smoke, data=surveyPulseSmoke)
+# anovaRes    # this does not give the easy-to-read result of the aov analysis
+names(anovaRes)
+# summary(anovaRes)
+xkabledply(anovaRes) # same exact result with or without re-ordering. 
+```
+
+### Post-hoc Tukey HSD (not really needed)
+
+```{r tukeyHSD_not_needed, eval=F}
+tukeySmokeAoV <- TukeyHSD(anovaRes)
+tukeySmokeAoV
+```
+
+## Example 2: Agricolae  
+Another example (see <https://rstudio-pubs-static.s3.amazonaws.com/181709_eec7a5bc24c04b8badeb297c4807109a.html> for example). The library/package agricolae might not be working with the new R version anymore. Let's try anyways.
+```{r agricolae}
+loadPkg("agricolae")
+data("PlantGrowth")
+loadPkg("lemon") 
+```
+
+```{r, results='markup'}
+xkabledply(PlantGrowth[1:4,], title = "First four rows of dataframe: `PlantGrowth`")
+# head(PlantGrowth)
+# str(PlantGrowth)
+```
+
+It is a simple sample dataset recording the plant growth (weight, after a fixed number of days) under three different groups: control group, treatment 1, and treatment 2.
+
+### Chart
+
+```{r}
+loadPkg("ggplot2")
+ggplot(PlantGrowth, aes(x=group, y=weight)) + 
+  geom_boxplot( colour=c("#ff0000","#11cc11","#0000ff"), outlier.shape=8, outlier.size=4) +
+  labs(title="Plant Weight (oz) between the control and the two treatment groups", x="Control / Treatment", y = "Weight (oz)")
+
+
+# Simple plots
+# plot(PlantGrowth$weight ~ PlantGrowth$group)   # OR
+# plot(weight ~ group, data=PlantGrowth, main="Plant Weight (oz) between the control and the two treatment groups", col=c("#00ff00","#ff00ff","#ff0000") )
+```
+
+### ANOVA Test
+Let us run the test, and look at the results:  
+```{r}
+plant_aov = aov(weight ~ group, data = PlantGrowth)
+# plant_aov  # this does not give the easy-to-read result of the aov analysis
+# summary(plant_aov)
+plantaovsummary = summary(plant_aov)
+plantaovsummary
+# xkabledply(plant_aov)
+```
+
+Now with a small p-value of `plantaovsummary[[1]][["Pr(>F)"]][[1]]` = `r plantaovsummary[[1]][["Pr(>F)"]][[1]]`, we should pursue to find out which pair(s) are different. So we use tukeyHSD.  (Sorry, there is no good easy way to extract the p-value from the ANOVA result! This is clumsy, but it works at least.)
+
+### Post-hoc Tukey HSD
+
+```{r tukeyHSD}
+tukeyAoV <- TukeyHSD(plant_aov)
+tukeyAoV
+```
+
+As we visually see from the boxplots, now confirmed with the tukey results, treatment 1 and 2 are pairwise considered having different means, while the other pairs are not significant at 0.05 level.
+

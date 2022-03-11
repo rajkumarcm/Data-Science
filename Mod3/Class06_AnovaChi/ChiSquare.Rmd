@@ -1,0 +1,137 @@
+---
+title: "Chi-squared  test"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=F}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+```
+
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+# $\chi^2$ Sqaured
+
+Again, we are not focusing on the neatness and styling of the output here. Just how to run the tests and understand the results.  
+
+## Goodness of Fit test
+
+Now try $\chi^2$ Goodness of Fit test. We need the observed frequencies, and the expected frequencies. Run the $\chi^2$ test, and quickly look at the test summary: 
+```{r chisq_goodness1}
+grades = c(A=837, B=861, C=690)
+exp_freq = c(.36, .35, .29)
+# Next perform chi-square test
+chigoodness = chisq.test(grades, p = exp_freq) # p stands for proportions
+# look at the result
+chigoodness
+```
+
+The resulting 'object' is complex. You can inspect this `chigoodness` object in the `Environment` tab. The names or indices is shown here:  
+```{r, results="markup"}
+names(chigoodness)
+```
+
+
+We can extract the $\chi^2$ value of the test from `chigoodness$statistic` = `r chigoodness$statistic`, while extracting the p-value from `chigoodness$p.value` = `r chigoodness$p.value`. The degree of freedom is given by `chigoodness$parameter` = `r chigoodness$parameter`.
+
+The expected values of the frequencies is given by `chigoodness$expected`. Since this part is a simply array object in R, we can use our `xkabledply()` function to neatly print it out.
+
+```{r}
+xkabledply( as.table(chigoodness$expected), title = "Expected frequencies", wide = T)
+```
+
+
+```{r, eval=F}
+# This block is not shown, but we can run/execute this chunk to see the results easily when coding
+chigoodness$statistic
+chigoodness$parameter
+chigoodness$expected
+```
+
+
+And we can also calculate the p-value directly like this: `pchisq(1.3673, 2, lower.tail=F)` = `r pchisq(1.3673, 2, lower.tail=F)`. We always use the right tail for goodness of fit test. 
+
+```{r, eval=F}
+# This block is not shown, but we can run/execute this chunk to see the results easily when coding
+pchisq(1.3673, 2, lower.tail=F) # always right tail for test of independence as well
+```
+
+
+## Test of Independence  
+
+Next, let's try using Chi-squared test of independence. We need a "contingency table". Before that, similar to what we did in the ANOVA example, we better re-order the ordinal level variables the proper way.  
+
+```{r chisq_test_indep, results="markup"}
+loadPkg("MASS")
+surveySmokeExer = MASS::survey 
+surveySmokeExer$Smoke <- factor(surveySmokeExer$Smoke, order=T, levels = c("Never","Occas","Regul","Heavy"))
+surveySmokeExer$Exer <- factor(surveySmokeExer$Exer, order=T, levels = c("None","Some","Freq"))
+
+contable = table(surveySmokeExer$Smoke, surveySmokeExer$Exer)
+# contable # the contingency table
+xkabledply(contable, title="Contingency table for Smoke (habit) vs Exercise (level) in library 'MASS'")
+```
+
+Next, we can perform the $\chi^2$ test, and take a quick look at the summary result:
+
+```{r, results="markup"}
+chitest = chisq.test(contable)
+chitest
+```
+
+The resulting 'object' is complex. You can inspect this `chitest` object in the `Environment` tab. The names or indices is shown here:  
+```{r}
+names(chitest)
+```
+
+
+```{r, eval=F}
+# This block is not shown, but we can run/execute this chunk to see the results easily when coding
+chitest$statistic
+chitest$p.value
+chitest$parameter
+```
+
+The $\chi^2$ value of the test is given by `chitest$statistic` = `r chitest$statistic`, while the p-value is `chitest$p.value` = `r chitest$p.value`. The degree of freedom is given by `chitest$parameter` = `r chitest$parameter`.
+
+The expected values of the frequencies is given by `chitest$expected`. Since this part is a table object in R, we can use our `xkabledply()` function to neatly print it out.
+
+```{r}
+xkabledply(chitest$expected, title = "Cross table for the expected frequencies between Smoke (habit) vs Exercise (level) in library 'MASS'")
+```
+
+And we can also calculate the p-value directly like this: `pchisq(5.4885, 6, lower.tail=F)` = `r pchisq(5.4885, 6, lower.tail=F)`. We alwas use the right tail for test of independence as well. 
+
+```{r, eval=F}
+# This block is not shown, but we can run/execute this chunk to see the results easily when coding
+pchisq(5.4885, 6, lower.tail=F) # always right tail for test of independence as well
+```
+
+
+
+
+
