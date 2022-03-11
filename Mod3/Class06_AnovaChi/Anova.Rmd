@@ -25,8 +25,8 @@ library(ezids)
 ```{r setup, include=FALSE}
 # some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
-# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
-knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+# knitr::opts_chunk$set(warning = F, results = "hide", message = F)
 options(scientific=T, digits = 3) 
 # options(scipen=9, digits = 3) 
 # ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
@@ -57,7 +57,7 @@ ggplot(surveyPulseSmoke, aes(x=Smoke, y=Pulse)) +
 
 ### ANOVA Test
 
-```{r aov, results='asis'}
+```{r aov}
 anovaRes = aov(Pulse ~ Smoke, data=surveyPulseSmoke)
 # This is the standard R-notation of entering an equation, y ~ x
 # We will learn and use this more as it goes on.

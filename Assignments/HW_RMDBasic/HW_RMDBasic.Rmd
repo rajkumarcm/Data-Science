@@ -1,0 +1,149 @@
+---
+title: "R - Assignment RMD Basic"
+author: "Your Name"
+date: "today??"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=F}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+# Once installed, load the library.
+library(ezids)
+```
+
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+# knitr::opts_chunk$set(include = F)
+# knitr::opts_chunk$set(echo = TRUE)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+```
+
+```{r}
+# 1. Answer each question using in words/paragraph. 
+# 2. DO NOT use comments inside code blocks (like here) to answer anything. Those are for notes between coders/self. They 
+# will be ignored, and not counted as answers. 
+# 3. Keep the line/option    knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+# You can temporarily turn this on/off and use other option while you are working on the homework if it helps. 
+# The submitted work should have this option selected instead.
+# 4. All charts/graphs/tables should have appropriate captions. 
+```
+
+
+# HW - Module 2 week 03
+
+## Question 1. Import
+**Read in the file with all the baseball players height, weight and age info (BaseballHeightWeight.csv) as a dataframe and save it as baseball. Then display the structure of the dataframe.**  
+
+```{r Q1}
+# This is coder's comments
+# Since my RMD and csv files are in the same working directory, I do not need to give the full path to the csv file. Alternatively, you can use the functions getwd() and setwd() to handle it.
+
+baseball <- data.frame(read.csv("BaseballHeightWeight.csv"))
+# baseballdf <- read.csv("BaseballHeightWeight.csv")
+# You can compare the two above lines, and look at the object called baseball in the "Environment" on the upper right. 
+# Turns out either method gives the same result. In some cases (depending on the .csv file), they might differ. To be safe, I usually use data.frame( ) afterwards.
+```
+
+The function `read.csv()` was used to load the dataframe. In addition, we can see that there are `r nrow(baseball)` in the dataframe. 
+Note that `read.csv()` is just one of the many functions you can use to import data files. 
+
+The structure is printed below:
+
+```{r, result="asis"}
+# need results="asis" to overwrite the default, and show the result block in Html/pdf
+str(baseball)
+```
+
+I have yet to find a simple and easy way to "pretty-print" such structure in R output. Most of the time we don't need to show these to the readers though. 
+
+
+## Question 2. Head and Tail
+**Print out the first 5 and the last 3 rows of the dataframe.**  
+
+The `head()` and `tail()` functions are what we need.
+
+```{r, results='markup'}
+head(baseball, n=5)
+tail(baseball, n=3)
+```
+
+But we should use the modified version in `ezids` from now on:
+
+```{r, results="asis"}
+# you can use "markup" or "asis" here to get the same result.
+xkabledplyhead(baseball, 5, "The first 5 rows using `xkabledplyhead` function." )
+```
+and the last three rows:
+```{r, results="asis"}
+# you can use "markup" or "asis" here to get the same result.
+xkabledplytail(baseball, 3, "The last 3 rows using `xkabledplytail` function." )
+```
+
+
+## Question 3. Header change
+**Change the headers/column names from Weight.pounds. to weight, from Height.inches. to height, and Age to age.**  
+
+
+## Question 4. Head again
+**Print out the first two lines again to see the new column names.**  
+
+
+
+## Question 5. Summary
+**Find the statistics (summary) of the heights, weights, and ages of the players. Using complete sentences, give the reader these summary.**  
+
+
+
+## Question 6. Subset
+**You should find an issue with the weight data with an NA value. Use the `subset( )` function, select that data point (save as shyboy) and find out who the shy boy was.**
+
+
+
+## Question 7. Remove Shyboy
+**Remove shyboy from baseball, and then show the number of observations of the cleaned up dataframe baseball.**  
+
+
+
+## Question 8. Boxplot
+**Make a quick boxplot of the weight of the players. Use the `title( )` function immediately to add a title to the chart. (Try color #0000FF for blue.)**  
+
+
+## Question 9. Histogram
+**Make a histogram of the weight of the players. Try color 'green' this time. The function understands the word 'green' just fine. Give it a better title than the default. Does the distribution looks normal?**
+
+
+
+## Question 10. Scatterplot
+**Use ggplot, make a plot with weights vs heights of the players, color by Teams. Give it an appropriate title.**  
+
+
+
+## Question 11. Plot by age
+**Make a plot with weights vs heights of the players, color by age.**
+
+
+
+## Question 12. Team Washington
+**Obtain a subset of the data with only Team Washington. Using complete sentences, give the number of players in Team Washington.**
+
+
+
+## Question 13. Old Team Washington
+**Obtain another subset with Team Washington and only players older than 28. How many are there in this veteran group?**
+
+
