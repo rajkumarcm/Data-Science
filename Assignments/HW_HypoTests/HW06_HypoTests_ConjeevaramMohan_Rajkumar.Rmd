@@ -21,8 +21,8 @@ output:
 library(ezids)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
 knitr::opts_chunk$set(warning = F, results = "hide", message = F)
-options(scientific=T, digits = 3) 
-# options(scipen=9, digits = 3) 
+#options(scientific=T, digits = 3) 
+options(scipen=9, digits = 6) 
 # ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
 # use scipen=999 to prevent scientific notation at all times
 ```
@@ -45,66 +45,182 @@ The variables in the dataset are:
 
 **Same as last homework, import the dataset as Adata, and make sure the data type for the variables are set properly for categorical variables.**
 
-```{r q01}
-Adata <- data.frame(read.csv( ))
+```{r q01, results='asis'}
+Adata <- data.frame(read.csv(file='LogRegAdmit.csv',
+                              header=T,
+                              sep=',',
+                              fill=T,
+                              strip.white=T,
+                              blank.lines.skip=T,
+                              colClasses=c('admit'='factor', 'rank'='factor')))
+rmarkdown::paged_table(head(Adata, n=3))
 ```
 
-Answer answer answer. Lorem ipsum dolor sit amet...
 
 ### Question 2
 
 **Use the `outlierKD2()` function, remove the outliers for gre and gpa. Save the resulting dataframe as Adata2. You will need to do this in two steps, removing outliers for one variable at a time. How many NA values are in gre and in gpa with the resulting dataframe *Adata2*? **
 
-Answer answer answer. Lorem ipsum dolor sit amet...
-
+```{r, results='hide'}
+tmp1 <- outlierKD2(df=Adata, var=gre, rm=T, histogram=F)
+Adata2 <- outlierKD2(df=tmp1, var=gpa, rm=T, histogram=F)
+```
+There are `r sum(is.na(Adata2$gre))` NA values in GRE and `r sum(is.na(Adata2$gpa))` NA values in GPA  
 
 
 ### Question 3
 
 **Like last time, separate the two subsets again, for admitted and rejected. **
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+```{r}
+Adata2.admit <- Adata2[Adata2[, 'admit']==1, ]
+Adata2.reject <- Adata2[Adata2[, 'admit']==0, ]
 
+```
+Admitted subgroup:
+`r rmarkdown::paged_table(head(Adata2.admit, n=3))`  
+Rejected subgroup:
+`r rmarkdown::paged_table(head(Adata2.reject, n=3))`  
 
 
 ### Question 4
 
 **We were a little careless last time. Let us check for normality on the numerical variables. Let us use histogram (use `ggplot()`) and QQ-plot (use `qqnorm()`) to check the quantitative variables for the admitted and rejected subsets. Make a brief comment on the results. **
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+```{r}
+library(ggplot2)
 
+qqnorm(Adata2$gre, main='GRE QQ plot')
+qqline(Adata2$gre)
 
+qqnorm(Adata2$gpa, main='GPA QQ plot')
+qqline(Adata2$gpa)
+```
+
+**GRE**  
+```{r}
+
+qqnorm(Adata2.admit$gre, main='GRE of Admitted')
+qqline(Adata2.admit$gre)
+
+qqnorm(Adata2.reject$gre, main='GRE of Rejected')
+qqline(Adata2.reject$gre)
+
+ggplot(Adata2)+
+geom_histogram(aes(x=gre, fill=admit), bins=20, color='white', alpha=0.5)+
+xlab('GRE scores')+
+ylab('GRE scores frequency')+
+  labs(title='GRE scores distribution')
+
+```
+
+**GPA**  
+```{r}
+qqnorm(Adata2.admit$gpa, main='GPA of Admitted')
+qqline(Adata2.admit$gpa)
+
+qqnorm(Adata2.reject$gpa, main='GPA of Rejected')
+qqline(Adata2.reject$gpa)
+
+ggplot(Adata2)+
+geom_histogram(aes(x=gpa, fill=admit), bins=20, color='white', alpha=0.5)+
+xlab('GPA scores')+
+ylab('GPA scores distribution')+
+  labs(title='GPA distribution')
+
+```
+
+The GRE definitely does not appear normal as systematic deviation is visible from $qqnorm$ and even the histogram shows the distribution makes appearance as multimodal. 
+The GPA does appears normal when $qqnorm$ is applied for the entire population. However, the same does not hold for the admitted subset. Histogram shows for both the subset, this does not represent the normal bell curve.  .
 
 ### Question 5
 
 **Does the two subgroups have different gre average and gpa average? Use the standard $\alpha$ = 0.05. What are the p-values for the test on gre and gpa? What are your conclusions from the tests? **
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+```{r}
+alpha <- 0.05
+gre <- t.test(Adata2.admit$gre, Adata2.reject$gre)
+gpa <- t.test(Adata2.admit$gpa, Adata2.reject$gpa)
 
+null_hyp <- 'We fail to reject Null Hypothesis' 
+alt_hyp <- 'We reject Null hypothesis in favor of alternative hypothesis'
+null_res <- 'there is not enough evidence to confirm that the difference between the two average is statistically significant' # Null hyp
+alt_res <- 'the difference between the average of two subsets is not equal to zero'
+
+gre.hyp <- null_hyp
+gre.res <- null_res
+
+if (gre$p.value < alpha)
+{
+  gre.hyp <- alt_hyp
+  gre.res <- alt_res
+  
+}
+
+gpa.hyp <- null_hyp
+gpa.res <- null_res
+
+if (gpa$p.value < alpha)
+{
+  gpa.hyp <- alt_hyp
+  gpa.res <- alt_res
+}
+
+```
+
+For GRE, `r gre.res` as the p value is `r gre$p.value`  
+For GPA, `r gpa.res` as the p value is `r gpa$p.value`
 
 
 ### Question 6
 
-**With the dataset Adata2, construct a contingency table between rank and admit. Are these two variables qualitative or quantitative? **
+**With the dataset Adata2, construct a contingency table between rank and admit. Are these two variables qualitative or quantitative? **  
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+Both rank and admit are qualitative variables  
 
-
+**Contingency table**
+```{r, results='markup'}
+cont <- table(Adata2$rank, Adata2$admit)
+cont
+```
 
 ### Question 7
 
 **Find out whether rank is independent of admission, according to the contingency table above. **
+```{r, results='markup'}
+chitest <- chisq.test(cont)
+chitest
+```
+Since the $p$ value of $\chi^2$ (`r chitest$p.value`) is lower than the significance threshold, we reject the null hypothesis. In other words, it is believed that there is difference between the two groups i.e., they are independent.
 
-Answer answer answer. Lorem ipsum dolor sit amet...
 
-
-
-### Question 8
+### Question 8  
 
 **From *Adata2*, test whether students from the four ranks have the same average gre or not. And also test if they have the same average gpa or not. Remember that if they are not all the same, you will need to follow up with a post hoc test. Make brief comments on your results.**
+**GRE**
+```{r, results='markup'}
+aov.gre <- aov(gre ~ rank, data=Adata2)
+summary(aov.gre)
 
-Answer answer answer. Lorem ipsum dolor sit amet...
+gre.posthoc <- TukeyHSD(aov.gre)
+gre.posthoc
 
+```
+Since the ANOVA test shows the $Pr(>F)=$ `r summary(aov.gre)[[1]][["Pr(>F)"]][[1]]` is greater than significance threshold 0.05 for 95% confidence, we fail to reject the null hypothesis. In other words, there is not enough information to conclude that the difference between GRE scores for students from institutions of 4 different ranks is due to more than just a chance.  
+
+The Posthoc Honestly Significant Difference test results supports the fact there is not significant difference between gre scores of students from universities of four different ranks.  
+
+**GPA**
+```{r, results='markup'}
+aov.gpa <- aov(gpa ~ rank, data=Adata2)
+summary(aov.gpa)
+
+gpa.posthoc <- TukeyHSD(aov.gpa)
+gpa.posthoc
+```
+Since the ANOVA test shows the $Pr(>F)=$ `r summary(aov.gpa)[[1]][["Pr(>F)"]][[1]]` is greater than significance threshold 0.05 for 95% confidence, we fail to reject the null hypothesis. In other words, there is not enough information to conclude that the difference between GPA scores for students from institutions of 4 different ranks is due to more than just a chance.  
+
+The Posthoc Honestly Significant Difference test results supports the fact there is not significant difference between GPA scores of students from universities of four different ranks.
 
 
 
