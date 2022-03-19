@@ -54,7 +54,6 @@ for(cname in colnames(bike)){
   }
 }
 
-show(bike)
 ```
 There are `r length(colnames(bike))` variables in the bike dataframe and out of those, `r n_int` were imported as an integer.
 
@@ -64,7 +63,6 @@ There are `r length(colnames(bike))` variables in the bike dataframe and out of 
 These are the afternoon rush hour data. How many observations are there?   
 ```{r}
 bike16 <- bike[bike[, 'Hour']==16,]
-show(bike16)
 ```
 There are `r nrow(bike16)` observations in the rush hour subset.
 
@@ -123,6 +121,7 @@ Use options that shows well the relationships between different variables.
 #     num_cols <- c(num_cols, cname)
 #   }
 # }
+# I am confused when you asked only to use numeric variables since temp.f and feels like are the only two variables with numerical data type so I  thought you meant to use variables that are non-factors instead of numeric what I interpret as float.  
 
 num_cols <- c('Temperature.F', 'Temperature.Feels.F', 'Humidity', 'Wind.Speed', 'Total.Users')
 new_cols <- c('temp.f', 'feel.f', 'humid', 'wind', 'total')
@@ -136,12 +135,13 @@ bike_cormatrix <- corrplot::corrplot.mixed(cor(bike16.num_subset),
                                      tl.col = "black")
 ```
 
+I am confused when you asked only to use numeric variables since temp.f and feels like are the only two variables with numerical data type so I thought you meant to use variables that are non-factors instead of numeric what I interpret as float.  
 
 ### Question 6   
 **By using numerical variables only, build a linear model with 1 independent variable to predict the `Total Users`.**  
 Choose the variable with the strongest correlation coefficient. Make some short 
 comments on the coefficient values, their p-values, and the multiple R-squared value.  
-```{r lm}
+```{r lm, results='markup'}
 model1 <- lm(Total.Users~Temperature.Feels.F, data=bike_final)
 summary(model1)
 ```
@@ -154,7 +154,7 @@ The p value for variable Temperature.Feels.F represents its relationship with va
 
 **Comment on Multiple R squared**  
 From my understanding, in bivariate linear regression model, both Multiple $R^2$ and $R^2$ are the same. While Multiple R refers to the coefficient of multiple correlation between the independent and the dependent variables, its squared version represents the coefficient of determination.  
-The value of 0.309 ***(I couldn't retrieve this dynamically) *** means ~ 30% of the variance in the dependent variable can be predicted by the independent variable. In other words, it represents how good the model fits the data.  
+The value of 0.309 ***(I couldn't retrieve this dynamically) *** means $\sim 30\%$ of the variance in the dependent variable can be predicted by the independent variable. In other words, it represents how good the model fits the data.  
 
 
 ### Question 7   
@@ -173,19 +173,19 @@ vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Temperature.
 vif_values
 ```
 **Temperature.Feels.F vs Humidity**
-```{r}
+```{r, results='asis'}
 vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Humidity, data=bike_final[, num_cols]))
 vif_values
 ```
 **Temperature.Feels.F vs Wind.Speed**
-```{r}
+```{r, results='asis'}
 vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Wind.Speed, data=bike_final[, num_cols]))
 vif_values
 ```
 
 We can see from the above tables that variables Temperature.Feels.F and Temperature.F have high multicollinearity. Since Humidity has the next strongest correlation coefficient, it is chosen as the second variable for the second model.  
 
-```{r lm2}
+```{r lm2, results='markup'}
 model2 <- lm(Total.Users ~ Temperature.Feels.F+Humidity, data=bike_final)
 summary(model2)
 ```
@@ -198,25 +198,26 @@ summary(model2)
 All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis concluding that there is strong correlation between the independent and dependent variables. It makes sense why there is also a jump in Multiple $R^2$ value.  
 
 **Comment on Multiple R squared**  
-Compared to the previous model, the Multiple $R^2$ has some improvement, which is intuitive, as we have included a second variable that is highly correlated with the dependent variable Total.Users.  
+Compared to the previous model, the Multiple $R^2$ has some improvement, which is intuitive, as we have included a second variable that is highly correlated with the dependent variable Total.Users and also has statistical significance represented by code $***$.  
 
 
 ### Question 8  
 **We will try one more time as in the previous question, to add a third variable in our model.**  
-**Temperature.Feels+Humidity vs Wind.Speed**
-```{r vif}
+**Temperature.Feels+Humidity vs Wind.Speed**  
+```{r vif, results='asis'}
 vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Humidity+Wind.Speed, data=bike_final))
 vif_values
 ```
 
-**Temperature.Feels+Humidity vs Temperature.F**
-```{r}
+**Temperature.Feels+Humidity vs Temperature.F**  
+```{r, results='asis'}
 
 vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Humidity+Temperature.F, data=bike_final))
 vif_values
 ```
 Very obvious, and makes a lot sense to see Temperature.F and Temperature.Feels.F being highly correlated. Hence, Wind.Speed is chosen as the third variable for the third model.  
-```{r model3}
+
+```{r model3, results='markup'}
 model3 <- lm(Total.Users ~ Temperature.Feels.F+Humidity+Wind.Speed, data=bike_final)
 summary(model3)
 ```
@@ -227,15 +228,14 @@ summary(model3)
 4. The estimated coefficient value for Wind.Speed represents for every increase in this value, the total users decreases by `r model3$coefficients[['Wind.Speed']]` as this is negatively correlated with variable Total.Users.  
 
 **Comment on p-value**  
-All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis concluding that there is strong correlation between the independent and dependent variables. It makes sense why there is also a jump in Multiple $R^2$ value.  
+All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis. It makes sense why there is also a jump in Multiple $R^2$ value.  
 
 **Comment on Multiple R squared**  
-Compared to the previous model, the Multiple $R^2$ has the slightest of improvement as the p value is 0.036, which is closer to 0.05 at 95% confidence. This means the variable is less significant to the response variable in the model.  
-
+Compared to the previous model, the Multiple $R^2$ has the slightest of improvement as the p value for Wind.Speed is 0.036, which is closer to 0.05 at 95% confidence. This means the variable is less significant to the response variable in the model and is also represented by the significance code $*$.  
 
 ### Question 9  
 **For the 3-variable model you found, find the confidence intervals of the coefficients.**  
-```{r}
+```{r, results='markup'}
 stats::confint(model3)
 ```
 ```{r delete, include=F}
@@ -252,7 +252,7 @@ print(upper_bound)
 **Use ANOVA to compare the three different models you found.**  
 You have found three different models. Use ANOVA test to compare their residuals. What conclusion can you draw?
 
-```{r anova}
+```{r anova, results='markup'}
 a_variance_analysis <- anova(model1, model2, model3)
 a_variance_analysis
 ```
