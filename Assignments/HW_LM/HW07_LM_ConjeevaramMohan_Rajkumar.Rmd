@@ -195,7 +195,7 @@ summary(model2)
 3. The estimated coefficient value for Humidity represents for every increase in this value, the total users decreases by `r model2$coefficients[['Humidity']]` as this is negatively correlated.
 
 **Comment on p-value**  
-All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis concluding that there is strong correlation between the independent and dependent variables. It makes sense why there is also a jump in Multiple $R^2$ value.  
+All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis. It makes sense why there is also a jump in Multiple $R^2$ value.  
 
 **Comment on Multiple R squared**  
 Compared to the previous model, the Multiple $R^2$ has some improvement, which is intuitive, as we have included a second variable that is highly correlated with the dependent variable Total.Users and also has statistical significance represented by code $***$.  
