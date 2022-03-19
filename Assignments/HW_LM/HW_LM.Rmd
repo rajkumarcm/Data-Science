@@ -128,8 +128,8 @@ num_cols <- c('Temperature.F', 'Temperature.Feels.F', 'Humidity', 'Wind.Speed', 
 
 bike16.num_subset <- bike16[, num_cols]
 
-bike_cormatrix <- corrplot::corrplot.mixed(cor(bike16.num_subset),
-                                     lower = "number", 
+bike_cormatrix <- corrplot::corrplot(cor(bike16.num_subset),
+                                     lower = "number",
                                      upper = "circle",
                                      tl.col = "black")
 ```
@@ -165,7 +165,7 @@ variable with the next strongest correlation until you find one that works
 comment on the coefficient values, their p-values, 
 and the multiple R-squared value.  
 **Temperature.Feels.F vs Temperature.F**
-```{r vif, results='asis'}
+```{r, results='asis'}
 
 vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Temperature.F, data=bike_final[, num_cols]))
 vif_values
@@ -189,8 +189,8 @@ summary(model2)
 ```
 **Coefficient interpretation**  
 1. An intercept value of `r model2$coefficients[['(Intercept)']]` represents the average number of users when the feel like temperature and wind speed are both $0^{\circ}F$.   
-2. The estimated coefficient value for Temperature.Feels.F represents for every increase in this value, the total users increases by `r model1$coefficients[['Temperature.Feels.F']]`  
-3. The estimated coefficient value for Humidity represents for every increase in this value, the total users decreases by `r model1$coefficients[['Humidity']]` as this is negatively correlated.
+2. The estimated coefficient value for Temperature.Feels.F represents for every increase in this value, the total users increases by `r model2$coefficients[['Temperature.Feels.F']]`  
+3. The estimated coefficient value for Humidity represents for every increase in this value, the total users decreases by `r model2$coefficients[['Humidity']]` as this is negatively correlated.
 
 **Comment on p-value**  
 All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis concluding that there is strong correlation between the independent and dependent variables. It makes sense why there is also a jump in Multiple $R^2$ value.  
@@ -201,17 +201,62 @@ Compared to the previous model, the Multiple $R^2$ has some improvement, which i
 
 ### Question 8  
 **We will try one more time as in the previous question, to add a third variable in our model.**  
+**Temperature.Feels+Humidity vs Wind.Speed**
+```{r vif}
+vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Humidity+Wind.Speed, data=bike_final))
+vif_values
+```
 
+**Temperature.Feels+Humidity vs Temperature.F**
+```{r}
+
+vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Humidity+Temperature.F, data=bike_final))
+vif_values
+```
+Very obvious, and makes a lot sense to see Temperature.F and Temperature.Feels.F being highly correlated. Hence, Wind.Speed is chosen as the third variable for the third model.  
+```{r model3}
+model3 <- lm(Total.Users ~ Temperature.Feels.F+Humidity+Wind.Speed, data=bike_final)
+summary(model3)
+```
+**Coefficient interpretation**  
+1. An intercept value of `r model3$coefficients[['(Intercept)']]` represents the average number of users when the feel like temperature and wind speed are both $0^{\circ}F$.   
+2. The estimated coefficient value for Temperature.Feels.F represents for every increase in this value, the total users increases by `r model3$coefficients[['Temperature.Feels.F']]`  
+3. The estimated coefficient value for Humidity represents for every increase in this value, the total users decreases by `r model3$coefficients[['Humidity']]` as this is negatively correlated with variable Total.Users.  
+4. The estimated coefficient value for Wind.Speed represents for every increase in this value, the total users decreases by `r model3$coefficients[['Wind.Speed']]` as this is negatively correlated with variable Total.Users.  
+
+**Comment on p-value**  
+All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis concluding that there is strong correlation between the independent and dependent variables. It makes sense why there is also a jump in Multiple $R^2$ value.  
+
+**Comment on Multiple R squared**  
+Compared to the previous model, the Multiple $R^2$ has the slightest of improvement as the p value is 0.036, which is closer to 0.05 at 95% confidence. This means the variable is less significant to the response variable in the model.  
 
 
 ### Question 9  
 **For the 3-variable model you found, find the confidence intervals of the coefficients.**  
+```{r}
+stats::confint(model3)
+```
+```{r delete, include=F}
+critical_value <- qnorm(0.975)
+estimate <- 3.823
+std_error <- 0.217
 
-
+lower_bound <- estimate-critical_value*std_error
+upper_bound <- estimate+critical_value*std_error
+print(lower_bound)
+print(upper_bound)
+```
 ### Question 10    
 **Use ANOVA to compare the three different models you found.**  
 You have found three different models. Use ANOVA test to compare their residuals. What conclusion can you draw?
 
+```{r anova}
+a_variance_analysis <- anova(model1, model2, model3)
+a_variance_analysis
+```
+
+As already commented for Model3, there is not much improvement from Model2 to Model3 as the p value is 0.036 that is somewhat closer to 0.05 at 95% confidence level. However, it is still considered significant as the p value is lesser than 0.05  
+From Model1 to Model2, there is certainly substantial statistical significance as the code is $***$
 
 
 
