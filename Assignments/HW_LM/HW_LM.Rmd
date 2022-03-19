@@ -125,10 +125,12 @@ Use options that shows well the relationships between different variables.
 # }
 
 num_cols <- c('Temperature.F', 'Temperature.Feels.F', 'Humidity', 'Wind.Speed', 'Total.Users')
+new_cols <- c('temp.f', 'feel.f', 'humid', 'wind', 'total')
 
 bike16.num_subset <- bike16[, num_cols]
+colnames(bike16.num_subset) <- new_cols
 
-bike_cormatrix <- corrplot::corrplot(cor(bike16.num_subset),
+bike_cormatrix <- corrplot::corrplot.mixed(cor(bike16.num_subset),
                                      lower = "number",
                                      upper = "circle",
                                      tl.col = "black")
@@ -255,8 +257,9 @@ a_variance_analysis <- anova(model1, model2, model3)
 a_variance_analysis
 ```
 
-As already commented for Model3, there is not much improvement from Model2 to Model3 as the p value is 0.036 that is somewhat closer to 0.05 at 95% confidence level. However, it is still considered significant as the p value is lesser than 0.05  
-From Model1 to Model2, there is certainly substantial statistical significance as the code is $***$
+As already commented for Model3, there is not much improvement from Model2 to Model3 as the p value is 0.036 that is somewhat closer to 0.05 at 95% confidence level. However, it is still considered significant as the p value is lesser than 0.05.  
+From Model1 to Model2, there is certainly substantial statistical significance as the code is $***$  
+P.S. ANOVA on three different models compares their residuals to determine the statistical significance.  
 
 
 
