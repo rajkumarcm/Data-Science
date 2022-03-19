@@ -36,13 +36,37 @@ options(scientific=T, digits = 3)
 The `Date` variable is probably imported as factor level variable. In any case, let us remove `Date`, `Casual.Users`, 
 and `Registered.Users` in the dataset and save it as a new datafame, call it `bike`. How many variables are in `bike`? 
 How many of them are imported as `int`? Feel free to rename longer variable names into shorter ones for convenience.  
+```{r}
+bikeorig = data.frame(read.csv('bikedata.csv', sep=',',
+                                header=T, fill=T))
+bike <- bikeorig[, c(-1, -12, -13)]
+cnames <- colnames(bike)
+cnames[4] <- 'Day'
+cnames[5] <- 'Workday'
+cnames[6] <- 'Weather'
+colnames(bike) <- cnames
 
+n_int <- 0
+for(cname in colnames(bike)){
+  if(class(bike[, cname]) == 'integer')
+  {
+    n_int = n_int + 1
+  }
+}
+
+show(bike)
+```
+There are `r length(colnames(bike))` variables in the bike dataframe and out of those, `r n_int` were imported as an integer.
 
 
 ### Question 2    
 **Select only the subset with `Hour` equal 16 only. Call it `bike16`**  
 These are the afternoon rush hour data. How many observations are there?   
-
+```{r}
+bike16 <- bike[bike[, 'Hour']==16,]
+show(bike16)
+```
+There are `r nrow(bike16)` observations in the rush hour subset.
 
 ### Question 3  
 **Before building any models, we should make sure the variables are set up properly.**  
@@ -80,21 +104,55 @@ include categorical columns that we just converted.
 
 ### Question 4  
 **Make a `pairs()` plot with all the variables (quantitative and qualitative).**  
-
-
+```{r}
+pairs(bike_final)
+```
 ### Question 5  
 **Make a `corrplot()` with only the numerical variables.**  
 You can either subset the df with only numerical variables first, then create 
 the create the cor-matrix to plot. Or you can create the cor-matrix from 
 `bike16`, then select select out the portion of the matrix that you want. 
 Use options that shows well the relationships between different variables. 
- 
+```{r}
+
+# num_cols <- NULL
+# for(cname in colnames(bike16))
+# {
+#   if(class(bike16[, cname])=='numeric')
+#   {
+#     num_cols <- c(num_cols, cname)
+#   }
+# }
+
+num_cols <- c('Temperature.F', 'Temperature.Feels.F', 'Humidity', 'Wind.Speed', 'Total.Users')
+
+bike16.num_subset <- bike16[, num_cols]
+
+bike_cormatrix <- corrplot::corrplot.mixed(cor(bike16.num_subset),
+                                     lower = "number", 
+                                     upper = "circle",
+                                     tl.col = "black")
+```
 
 
 ### Question 6   
 **By using numerical variables only, build a linear model with 1 independent variable to predict the `Total Users`.**  
 Choose the variable with the strongest correlation coefficient. Make some short 
 comments on the coefficient values, their p-values, and the multiple R-squared value.  
+```{r lm}
+model1 <- lm(Total.Users~Temperature.Feels.F, data=bike_final)
+summary(model1)
+```
+**Coefficient interpretation**  
+1. An intercept value of `r model1$coefficients[['(Intercept)']]` represents the average number of users when the feel like temperature is $0^{\circ}F$.   
+2. A coefficient value for Temperature.Feels.F represents for every increase in this value, the total users increases by `r model1$coefficients[['Temperature.Feels.F']]`  
+
+**Comment on p-value**  
+The p value for variable Temperature.Feels.F represents its relationship with variable total users is statistically significant. 
+
+**Comment on Multiple R squared**  
+From my understanding, in bivariate linear regression model, both Multiple $R^2$ and $R^2$ are the same. While Multiple R refers to the coefficient of multiple correlation between the independent and the dependent variables, its squared version represents the coefficient of determination.  
+The value of 0.309 ***(I couldn't retrieve this dynamically) *** means ~ 30% of the variance in the dependent variable can be predicted by the independent variable. In other words, it represents how good the model fits the data.  
 
 
 ### Question 7   
@@ -106,10 +164,44 @@ variable with the next strongest correlation until you find one that works
 (ideally with vif’s <5, or if you have to, allow vif up to 10). Again, 
 comment on the coefficient values, their p-values, 
 and the multiple R-squared value.  
+**Temperature.Feels.F vs Temperature.F**
+```{r vif, results='asis'}
+
+vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Temperature.F, data=bike_final[, num_cols]))
+vif_values
+```
+**Temperature.Feels.F vs Humidity**
+```{r}
+vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Humidity, data=bike_final[, num_cols]))
+vif_values
+```
+**Temperature.Feels.F vs Wind.Speed**
+```{r}
+vif_values <- ezids::xkablevif(lm(Total.Users ~ Temperature.Feels.F+Wind.Speed, data=bike_final[, num_cols]))
+vif_values
+```
+
+We can see from the above tables that variables Temperature.Feels.F and Temperature.F have high multicollinearity. Since Humidity has the next strongest correlation coefficient, it is chosen as the second variable for the second model.  
+
+```{r lm2}
+model2 <- lm(Total.Users ~ Temperature.Feels.F+Humidity, data=bike_final)
+summary(model2)
+```
+**Coefficient interpretation**  
+1. An intercept value of `r model2$coefficients[['(Intercept)']]` represents the average number of users when the feel like temperature and wind speed are both $0^{\circ}F$.   
+2. The estimated coefficient value for Temperature.Feels.F represents for every increase in this value, the total users increases by `r model1$coefficients[['Temperature.Feels.F']]`  
+3. The estimated coefficient value for Humidity represents for every increase in this value, the total users decreases by `r model1$coefficients[['Humidity']]` as this is negatively correlated.
+
+**Comment on p-value**  
+All of the independent variables chosen so far are statistically significant in their relationship with the dependent variable. In other words, we reject the null hypothesis in favor of the alternate hypothesis concluding that there is strong correlation between the independent and dependent variables. It makes sense why there is also a jump in Multiple $R^2$ value.  
+
+**Comment on Multiple R squared**  
+Compared to the previous model, the Multiple $R^2$ has some improvement, which is intuitive, as we have included a second variable that is highly correlated with the dependent variable Total.Users.  
 
 
 ### Question 8  
 **We will try one more time as in the previous question, to add a third variable in our model.**  
+
 
 
 ### Question 9  
