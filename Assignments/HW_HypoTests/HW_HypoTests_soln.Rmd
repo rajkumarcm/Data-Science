@@ -1,0 +1,239 @@
+---
+title: "Intro to DS - Hypothesis Tests, T-test, 2-sample T-test, ANOVA, Chi-squared"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# HW Assignment - Hypothesis Testing 
+
+This exercise uses the same graduate school admissions dataset from last homework. The dataset is LogRegAdmit.csv.  
+The variables in the dataset are:  
+
+* `admit`: 0 or 1 (False or True)
+* `gre`: gre score
+* `gpa`: grade point average at undergraduate level
+* `rank`: the ranking of the applicant’s undergraduate institute, 1, 2, 3, or 4
+
+
+## Grad School Admissions
+
+
+### Question 1
+
+**Same as last homework, import the dataset as Adata, and make sure the data type for the variables are set properly for categorical variables.**
+
+```{r}
+Adata <- data.frame(read.csv("LogRegAdmit.csv"))
+Adata
+Adata$admit <- as.factor(Adata$admit)
+Adata$rank <- as.factor(Adata$rank)
+Adata 
+```
+
+Like last time, the data set was read in, and saved as Adata. The variables admit and rank are then convert them to categorical factors for subsequent analysis. The conversion is performed with the function `as.factor()`.
+
+
+### Question 2
+
+**Use the `outlierKD2()` function, remove the outliers for gre and gpa. Save the resulting dataframe as Adata2. You will need to do this in two steps, removing outliers for one variable at a time. How many NA values are in gre and in gpa with the resulting dataframe *Adata2*? **
+
+```{r q02, fig.show='hide'}
+# trying to hide the charts from the intermediate step, can also use include=FALSE to suppress everything
+Adata2 = outlierKD2(Adata, gre, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE) 
+# save as a new name here, not to mess up the original dataframe
+```
+
+```{r q02b}
+Adata2 = outlierKD2(Adata2, gpa, rm=TRUE, boxplt=TRUE, histogram=TRUE, qqplt=TRUE) 
+# overwrite Adata2 here, since we don't need to keep just gre outliers removed.
+```
+
+```{r q02c}
+xkablesummary(Adata2)
+# summary(Adata2)
+```
+
+After applying the outlierKD2 function two times on Adata, we arrived at dataframe Adata2 with those outliers removed. From the summary of Adata2, there are four NA in gre, and one in gpa.
+
+
+### Question 4
+
+**Like last time, separate the two subsets again, for admitted and rejected. **
+
+We create the two subsets called admitted and rejected. 
+
+```{r q03subset}
+admitted <- subset(Adata,admit==1)
+rejected <- subset(Adata,admit==0)
+```
+
+
+### Question 3
+
+**We were a little careless last time. Let us check for normality on the numerical variables. Let us use histogram (use `ggplot()`) and QQ-plot (use `qqnorm()`) to check the quantitative variables for the admitted and rejected subsets. Make a brief comment on the results. **
+
+
+Here are the histograms and QQ plots:
+
+```{r q03gre}
+loadPkg("ggplot2")
+loadPkg("gridExtra")
+
+histAdmitGRE <- ggplot(data=admitted, aes(gre)) + 
+  geom_histogram(breaks=seq(200, 800, by = 40), 
+                 col="red", 
+                 fill="#00aa22", 
+                 alpha = .7) + # opacity
+  labs(title="GRE Histogram for admitted student \n(outliers removed from all applicants)") +
+  labs(x="GRE", y="Frequency") 
+
+histRejectGRE <- ggplot(data=rejected, aes(gre)) + 
+  geom_histogram(breaks=seq(200, 800, by = 40), 
+                 col="red", 
+                 fill="#0000aa", 
+                 alpha = .7) + # opacity
+  labs(title="GRE Histogram for rejected student \n(outliers removed from all applicants)") +
+  labs(x="GRE", y="Frequency") 
+
+grid.arrange(histAdmitGRE, histRejectGRE, ncol=2, nrow=1)
+
+par(mfrow = c(1,2))
+qqnorm(admitted$gre, main="Admitted GRE Q-Q plot \n(outliers removed)", ylab = "GRE score") 
+qqline(admitted$gre)
+qqnorm(rejected$gre, main="Rejected GRE Q-Q plot \n(outliers removed)", ylab = "GRE score") 
+qqline(rejected$gre)
+
+unloadPkg("gridExtra")
+```
+
+The GRE histograms, although not a true normal distribution, look kind of bell-shaped for both admitted and rejected students. The GRE score of the top level at 800 has a small peak for both, which is not unusual. The actual SAT/GRE distribution also has a small peak on the high end, representing that the test has a hard ceiling of 800. If the test design allows spreading out the high ability students with scores over 800, the bump most likely would disappear.
+
+The QQ-plots shows a fairly good straight line fit against the theroetical quantiles, until it reaches the high end scores again. This confirms our findings from the histogram.
+
+```{r q03gpa}
+loadPkg("ggplot2")
+loadPkg("gridExtra")
+
+histAdmitGPA <- ggplot(data=admitted, aes(gpa)) + 
+  geom_histogram(breaks=seq(2, 4, by = .10), 
+                 col="blue", 
+                 fill="#22aa00", 
+                 alpha = .7) + # opacity
+  labs(title="Admitted GPA Histogram \n(outliers removed)") +
+  labs(x="GPA", y="Frequency") 
+
+histRejectGPA <- ggplot(data=rejected, aes(gpa)) + 
+  geom_histogram(breaks=seq(2, 4, by = .10), 
+                 col="blue", 
+                 fill="#2200aa", 
+                 alpha = .7) + # opacity
+  labs(title="Rejected GPA Histogram \n(outliers removed)") +
+  labs(x="GPA", y="Frequency")
+
+grid.arrange(histAdmitGPA, histRejectGPA, ncol=2)
+
+par(mfrow = c(1,2))
+qqnorm(admitted$gpa, main="Admitted GPA Q-Q plot \n(outliers removed)", ylab = "GPA") 
+qqline(admitted$gpa)
+qqnorm(rejected$gpa, main="Rejected GPA Q-Q plot \n(outliers removed)", ylab = "GPA") 
+qqline(rejected$gpa)
+
+unloadPkg("gridExtra")
+```
+
+The gpa data exhibits similar behavior as the gre data as well.
+
+
+### Question 5
+
+**Does the two subgroups have different gre average and gpa average? Use the standard $\alpha$ = 0.05. What are the p-values for the test on gre and gpa? What are your conclusions from the tests? **
+
+```{r q05gre}
+ttestgre = t.test(admitted$gre, rejected$gre)
+ttestgre
+```
+
+The gre average for the admitted and rejected groups are `r format(ttestgre$estimate)` respectively. The two-sample t-test shows a small p-value of `r format(ttestgre$p.value)`, thereby rejected the null, and adopting the alternate hypothesis of the two groups have different means at $\alpha$ = 0.01 (or even 0.001). 
+
+```{r q05gpa}
+ttestgpa = t.test(admitted$gpa, rejected$gpa)
+ttestgpa
+```
+The gpa average is the same story. The admitted and rejected groups have `r format(ttestgpa$estimate)` respectively. The two-sample t-test p-value is `r format(ttestgpa$p.value)`. So we adopt the alternate hypothesis of the two groups have different gre at $\alpha$ = 0.01 (or  0.001). 
+
+### Question 6
+
+**With the dataset Adata2, construct a contingency table between rank and admit. Are these two variables qualitative or quantitative? **
+
+```{r q06ctable}
+contable = table(Adata2$rank, Adata2$admit)
+contable # the contingency table
+loadPkg("printr")
+```
+
+The two variables are both categorical/qualitative. We used `as.factor()` after importing the dataset to change them to factor level earlier. The contingency table is shown here, with the first row for rejected (admit=0):  
+$\begin{bmatrix}
+`r contable[1]` & `r contable[2]` & `r contable[3]` & `r contable[4]` \\   
+`r contable[5]` & `r contable[6]` & `r contable[7]` & `r contable[8]`  
+\end{bmatrix}$
+
+
+### Question 7
+
+**Find out whether rank is independent of admission, according to the contingency table above. **
+
+```{r q07chisq}
+chitest = chisq.test(contable)
+chitest
+```
+
+A quick glance at the frequency table shows rejected has a higher frequency on ranks 3 and 4, relatively speaking, while the admitted group has more ranks 1 and 2. A $\chi^2$-test confirms the p-value to be `r format(chitest$p.value)`. So we reject the null, and adopt that the two frequency distributions are not the same. In other words, this is equivalent to saying that rank and being admitted are not independent of each other. There is an effect on admitted from the different ranks.
+
+### Question 8
+
+**From *Adata2*, test whether students from the four ranks have the same average gre or not. And also test if they have the same average gpa or not. Remember that if they are not all the same, you will need to follow up with a post hoc test. Make brief comments on your results.**
+
+```{r q08gre}
+anovaGre = aov(gre ~ rank, data=Adata2)
+summary(anovaGre)
+```
+
+The ANOVA test on gre vs the four ranks gives a p-value of `r summary(anovaGre)[[1]][["Pr(>F)"]][1]`, which fails to reject the null hypothesis of the four ranks having the same mean gre at $\alpha$=0.05. 
+
+
+```{r q08gpa}
+anovaGpa = aov(gpa ~ rank, data=Adata2)
+summary(anovaGpa)
+```
+
+Similarly, the ANOVA test on gpa vs the four ranks gives a p-value of `r summary(anovaGpa)[[1]][["Pr(>F)"]][1]`, which also fails to reject the null hypothesis of the four ranks having the same mean gpa at $\alpha$=0.05. 
+
+
+
+
+
+
+
