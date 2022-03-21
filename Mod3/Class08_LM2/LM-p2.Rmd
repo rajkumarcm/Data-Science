@@ -1,0 +1,367 @@
+---
+title: "Linear Model LM - part II"
+author: "GWU Intro to Data Science DATS 6101"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+ 
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r base_lib}
+loadPkg("faraway") # for vif function used inline
+```
+
+# Regression 
+
+## Factor variables
+
+Let us continue to use the mtcars (Motor Cars) dataset. Recall we had the correlation matrix as a guide/EDA. 
+
+```{r warning=F}
+str(mtcars)
+head(mtcars)
+mtcarscor = cor(mtcars) # get the correlation matrix between all numerical variables.
+mtcarscor
+loadPkg("corrplot")
+corrplot.mixed(mtcarscor)
+unloadPkg("corrplot")
+```
+
+From the help menu, we can see that the variables are: 
+
+* `mpg`: Miles/(US) gallon
+* `cyl`: Number of cylinders
+* `disp`: Displacement (cu.in.)
+* `hp`: Gross horsepower
+* `drat`: Rear axle ratio
+* `wt`: Weight (1000 lbs)
+* `qsec`: 1/4 mile time
+* `vs`: Engine (0 = V-shaped, 1 = straight)
+* `am`: Transmission (0 = automatic, 1 = manual)
+* `gear`: Number of forward gears
+* `carb`: Number of carburetors
+
+The current structure of the dataframe has all variables data type recorded 
+as `num`. But one can argue they should be re-classified as: 
+
+* Quantitative: `mpg`, `disp`, `hp`, `drat`, `wt`, `qsec`
+* Depends: `cyl`, `gear`, `carb`
+* Qualitative/Categorical: `vs`, `am`
+
+For our purpose here, let us convert these five as categorical: `cyl`, `gear`, 
+`carb`, `vs`, `am`. Let us also take a look at the structure of the dataframe 
+before and after the conversion. (Not shown in html, but from console execution.) 
+We will save the new dataframe with categorical variables `mtc`.
+
+```{r}
+str(mtcars)
+mtc <- mtcars
+mtc$cyl = factor(mtcars$cyl)
+mtc$gear = factor(mtcars$gear)
+mtc$carb = factor(mtcars$carb)
+mtc$vs = factor(mtcars$vs)
+mtc$am = factor(mtcars$am)
+str(mtc)
+```
+
+Here, the levels of the factor variables are set with alpha-numeric order. 
+In other cases, if the such order is not what we want, we can specify them 
+when converting.
+
+```{r}
+mtc$cyl = factor(mtcars$cyl, levels = c("4","6","8"))
+mtc$gear = factor(mtcars$gear, levels = c("3","4","5"))
+mtc$carb = factor(mtcars$carb, levels = c("1","2","3","4","5","6"))
+mtc$vs = factor(mtcars$vs, levels = c("1","0"))
+mtc$am = factor(mtcars$am, levels = c("0","1"))
+str(mtc)
+```
+
+First, notice that in R, once the we converted a variable to factor, the recorded 
+values are now strings. For example, `cyl` now has values "6", "6", "4", "6",...
+(NOT 2, 2, 1, 2, ..., NOR 6, 6, 4, 6,...). 
+
+
+So, can we still talk about the correlation coefficient between a quantitative 
+and a categorical data? The answer is  
+
+> **NO** and **YES**
+
+### Pearsons vs Spearman  
+If we try to calculate correlation coefficient between one numeric and one 
+categorical variable, the `cor()` function will throw an error. For example:  
+`cor(mtc$disp,mtc$cyl)`  
+results in "Error in cor(mtc\$disp, mtc\$cyl) : 'y' must be numeric".
+
+Since `mtc$cyl` values are just "1", "2", and "3" now, we can still calculate 
+something like a regular correlation coefficient:  
+`cor(mtc$disp,as.numeric(mtc$cyl))` = `r cor(mtc$disp,as.numeric(mtc$cyl))`  
+which is the result we took last time without thinking much about it. You can 
+also find this correlation coefficient in the `corrplot()` table before we 
+convert to categorical. Recall that scaling, or shifting, does not change the 
+correlation coefficient.
+
+But does this make sense to use it between numeric and categorical variables?
+
+Read the article here:  
+Hauke,J. & Kossowski,T.(2011). [Comparison of Values of Pearson's and Spearman's 
+Correlation Coefficients on the Same Sets of Data. 
+Quaestiones Geographicae, 30(2) 87-93](https://doi.org/10.2478/v10117-011-0021-1).
+
+In essence, when one variable is ordinal, or not normal (distributed), it is 
+better to use the spearman method than the default "pearson" method.  
+In our case, comparing the two results, we find:  
+`cor(mtc$disp,as.numeric(mtc$cyl), method="pearson")` = `r cor(mtc$disp,as.numeric(mtc$cyl), method="pearson")`  
+`cor(mtc$disp,as.numeric(mtc$cyl), method="spearman")` = `r cor(mtc$disp,as.numeric(mtc$cyl), method="spearman")`  
+
+The same set of choices is available for the correlation test function 
+`cor.test()`. As an example, the **pearson** (default) method yields :  
+```{r results='markup'}
+cor.test(mtc$disp,as.numeric(mtc$cyl), method="pearson")
+```  
+while the **spearman** gives
+```{r results='markup'}
+cor.test(mtc$disp,as.numeric(mtc$cyl), method="spearman")
+```  
+
+
+We were a little sloppy in last week's work and basically used pearson's method 
+for all pairs of correlation coefficients. We can fix our mistakes when we have 
+time.
+
+### LM with num + factor predictors
+
+Last time, we built model 3 (`fit3`) involving `cyl` which is now restated as 
+a factor variable. How does that change our results? Let us compare them. 
+First, similar to last week, we will crate a simple version:
+
+```{r}
+fit2 <- lm(mpg ~ wt+cyl, data = mtcars)
+summary(fit2)
+```
+
+```{r results='markup'}
+xkabledply(fit2, title = paste("Model (num):", format(formula(fit2)) ) )
+xkablevif(fit2)
+```
+
+The multiple-$r^2$ value for this model `fit2` is `r summary(fit2)$r.squared `.
+
+Next we will use `cyl` as factor variable.  In such cases, each **level** will get a coefficient from the model fitting. If the "base" level can be absorbed in another coefficient, it will then be assigned as zero. 
+ 
+```{r}
+catfit2 <- lm(mpg ~ wt+cyl, data = mtc)
+summary(catfit2)
+```
+
+
+```{r results='markup'}
+xkabledply(catfit2, title = paste("Model (factor):", format(formula(catfit2)) ) )
+```
+
+And the multiple-$r^2$ value for this model `catfit2` is `r summary(catfit2)$r.squared `.
+
+How do we interpret these results? 
+
+ * Where is `cyl4`?
+ * Is the new model just "one" model or "three" models?
+
+We should write down the newest model on a line. (Will do that on OneNote in class.) 
+OR, we can write down the model as three lines (three models)  
+cyl 4: mpg = 33.99 -  0   - 3.21 * wt      
+cyl 6: mpg = 33.99 - 4.26 - 3.21 * wt      
+cyl 8: mpg = 33.99 - 6.07 - 3.21 * wt      
+
+They are the same as (just a random example here)  
+cyl 4: mpg = 35.99 - 2.00 - 3.21 * wt    
+cyl 6: mpg = 35.99 - 6.26 - 3.21 * wt      
+cyl 8: mpg = 35.99 - 8.07 - 3.21 * wt     
+
+To avoid such arbitrary assignment, the base level is assumed zero whenever it 
+can be absorbed in other coefficient.
+
+The similar results and features for more variables:
+
+```{r}
+fit3 <- lm(mpg ~ wt+disp+cyl, data = mtcars)
+summary(fit3)
+```
+```{r results='markup'}
+xkabledply(fit3, title = paste("Model (num):", format(formula(fit3)) ) )
+xkablevif(fit3)
+```
+
+The multiple-$r^2$ value for this model (all numeric) `fit3` is `r summary(fit3)$r.squared `.
+
+Then we use `cyl` as factor variable.   
+ 
+```{r}
+catfit3 <- lm(mpg ~ wt+disp+cyl, data = mtc)
+summary(catfit3)
+```
+
+```{r results='markup'}
+xkabledply(catfit3, title = paste("Model (factor):", format(formula(catfit3)) ) )
+xkablevif(catfit3)
+```
+
+And the multiple-$r^2$ value for this model `catfit3` is `r summary(catfit3)$r.squared `.
+
+We can also compare the plots. First the previous results (numeric variables):  
+```{r}
+plot(fit3)
+```
+
+And then the new results (factor variable).
+```{r}
+plot(catfit3)
+```
+
+
+## Interaction terms (numeric variables)
+
+We will now allow interaction terms in our models. Will only include numerical 
+variables here at first. We will try one with `qsec` which has a weak 
+correlation with `wt`.
+
+```{r}
+mixfit2 <- lm(mpg ~ (wt+disp+qsec)^2, data = mtcars)
+summary(mixfit2)
+```
+
+```{r results='markup'}
+xkabledply(mixfit2, title = "Model w/interaction: degree 2 in wt, disp, qsec")
+xkablevif(mixfit2)
+```
+
+```{r eval=FALSE}
+# plot(mixfit2)
+```
+
+And the multiple-$r^2$ value for this model `mixfit2` is 
+`r summary(mixfit2)$r.squared `. It continues to get better, but this is 
+simply a known fact that $r^2$ will improve with the number of predictors. The 
+coefficient p-values tell a very story in terms of model accuracy. 
+
+Try another one of degree 3.This time, let us include `hp` instead of `qsec`, 
+which has a strong correlation with `wt`.
+
+```{r}
+mixfit3 <- lm(mpg ~ (wt+disp+hp)^3, data = mtcars)
+summary(mixfit3)
+```
+
+```{r results='markup'}
+xkabledply(mixfit3, title = "Model w/interaction: degree 3 in wt, disp, hp")
+xkablevif(mixfit3)
+```
+
+```{r eval=FALSE}
+# plot(mixfit3)
+```
+
+And the multiple-$r^2$ value for this model `mixfit3` is 
+`r summary(mixfit3)$r.squared `. Again, the $r^2$ improvement means very little 
+while the 
+coefficient p-values are rather dismal. 
+
+To compare all these models nonetheless, let us also include the base model we 
+tried previously `mpg ~ wt` (as fit1). The anova results is:
+
+```{r}
+fit1 <- lm(mpg ~ wt, data = mtcars)
+summary(fit1)
+# vif(fit1)
+```
+
+```{r results='markup'}
+anova(fit1,fit3,catfit3,mixfit3) -> anovaRes
+anovaRes
+#str(anovaRes)
+```
+
+And a nicer display of the anova result table is here:  
+```{r results='markup'}
+xkabledply(anovaRes, title = "ANOVA comparison between the models")
+```
+
+Recall that the table shows the step-by-step Residual DF, Residual SS, as well as *REDUCTION* in DF and Sum of Sq. The last two columns show the F-Statistics and p-values of the anova test (between the current and previous rows). 
+
+
+
+## Interaction with num and factor vars
+
+The concepts above can be extended naturally to models with interactions between numeric and factor variables. Let us try a few here.  
+
+```{r results='markup'}
+mixcatfit1 = lm(mpg ~ wt*cyl, data = mtc)
+xkabledply(mixcatfit1)
+```  
+
+Is the result what you expect?  Again, we can interpret this as one complex model, 
+or three simpler models:   
+cyl 4: mpg = 39.57 -  0    - (5.65 - 0) * wt      
+cyl 6: mpg = 39.57 - 11.16 - (5.65 - 2.87) * wt      
+cyl 8: mpg = 39.57 - 15.70 - (5.65 - 3.45) * wt      
+
+Putting it in another way, the term `cyl` will allow the three models (three cases)
+to have different intercepts. The (interaction) term `cyl:wt` will allow the 
+three models to have three different slopes for `wt` in the linear model.
+
+Let us try another one. Is the result what you expect?  
+
+```{r results='markup'}
+mixcatfit2 = lm(mpg ~ wt*cyl + cyl:hp, data = mtc)
+xkabledply(mixcatfit2)
+```
+
+Why is there a `cyl4:hp` term??  
+
+Okay, one last with factor:factor.  
+
+```{r results='markup'}
+mixcatfit3 = lm(mpg ~ wt + cyl*gear, data = mtc)
+xkabledply(mixcatfit3 )
+```
+
+Again, is the result what you expect? Why isn't there a term for `cyl8:gear4`?
+
+Afterall, interaction between two factor variable simply introduces (m x n) 
+"intercepts" for the (m x n) scenarios.
+
+
+```{r results='markup'}
+# check
+xkabledply( table(mtc$cyl,mtc$gear), title = "Contingency table: gear vs cyl" )
+```
+
+```{r}
+# also check directly:
+sub84 = subset(mtc, cyl=="8" & gear=="4")
+nrow(sub84)
+sub83 = subset(mtc, cyl=="8" & gear=="3")
+nrow(sub83)
+```
+
