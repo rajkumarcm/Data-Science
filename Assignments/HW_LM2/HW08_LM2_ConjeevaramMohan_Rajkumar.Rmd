@@ -61,7 +61,11 @@ Correlation Coefficients on the Same Sets of Data.
 Quaestiones Geographicae, 30(2) 87-93](https://doi.org/10.2478/v10117-011-0021-1).  
 Simply indicate you have read it.  
 
-INDICATEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE  
+I read the article and understood that Spearman correlation is based on rank statistic and is primarily used when:  
+
+1. Assumption of the normality does not necessarily need to be made  
+2. You want a monotonic function to describe the relationship between the two variables rather just a linear function  
+3. Qualitative variables required to be assessed  
 
 ### Question 1  
 **Compare the difference of the correlation matrix between the Pearson and Spearman methods**  
@@ -123,7 +127,7 @@ grid.arrange(p, s, nrow=1)
 
 Spearman is a modified version of Pearson correlation that converts the data into rank to estimate how well a monotonic function can describe the relationship between two variables, as per the paper by Hauke et.al. For instance, let me first convert Humidity and TempF to rank so that we can then use Pearson to compute the correlation to compare.  
 
-```{r, results='asis'}
+```{r, results='markup'}
 humidity <- rank(bike_final$Humidity)
 temp <- rank(bike_final$TempF)
 cor(data.frame(Humidity=humidity, TempF=temp))
@@ -148,7 +152,7 @@ ggplot(bike_final, aes(x=TempF, y=Tusers)) +
 geom_point(color='blue') +
 geom_line(data=df2, color='red', lwd=1.1)
 ```
-
+`Tusers` = - 0.154 + 4.828 `TempF`  
 
 ### Question 3    
 **Build a linear model for `Tusers`, with one numerical and one categorical predictor with at least 3 levels.**  
@@ -269,7 +273,7 @@ anova.model <- anova(model1, model2, model3)
 anova.model
 ```
  
-The subsequent expansion to the model shows statistical significance between their residuals. In other words, the model has improved. 
+The consequential expansion of the model shows statistical significance between their residuals. In other words, the model has improved. 
 
 ### Question 7   
 **Try build a model with three categorical variables only, and their interaction terms.**  
@@ -280,4 +284,4 @@ last_model <- lm(Tusers~(Season+Weather+Workday)^2, data=bike_final)
 summary(last_model)
 ```
 
-
+From the lectures in the class, OneNote materials, and from what I can also understand on what's given in [analysis factor](https://www.theanalysisfactor.com/interpreting-interactions-in-regression/#:~:text=Adding%20interaction%20terms%20to%20a,each%20coefficient%20is%20telling%20you.), I believe without the interaction term included, we interpret `Season2` as the unique effect of Season2 on `Tusers`. When an interaction term is included such as `Season2`:`Weather2`, we are controlling one of the predictors to assess the effect of the other predictor on the response variable for different values of the controlled variable. The term controlled variable is used to mean that by keeping, for instance, `Weather2=True`, we are assessing the effect of `Season2` when `Weather2=True`. It is also understood that interaction terms are typically included to testing our hypothesis on how one predictor would affect the response when one of the other values of th predictor variable is held constant. From what's given in the OneNotes, I can also understand that using interaction terms can be used to filter significant terms from the summary of the model. Perhaps a new LM can be created including those that are significant.  
