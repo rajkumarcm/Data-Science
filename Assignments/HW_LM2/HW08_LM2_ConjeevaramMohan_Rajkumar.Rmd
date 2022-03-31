@@ -19,6 +19,8 @@ output:
 # some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
 library(ezids)
+library(ggplot2)
+library(gridExtra)
 # knitr::opts_chunk$set(warning = F, results = "markup", message = F)
 knitr::opts_chunk$set(warning = F, results = "hide", message = F)
 options(scientific=T, digits = 3) 
@@ -57,20 +59,95 @@ Read the article here:
 Hauke,J. & Kossowski,T.(2011). [Comparison of Values of Pearson's and Spearman's 
 Correlation Coefficients on the Same Sets of Data. 
 Quaestiones Geographicae, 30(2) 87-93](https://doi.org/10.2478/v10117-011-0021-1).  
-Simply indicate you have read it.
+Simply indicate you have read it.  
+
+INDICATEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE  
 
 ### Question 1  
 **Compare the difference of the correlation matrix between the Pearson and Spearman methods**  
-Look at the correlation matrices using the two methods. Compare and comment on their differences.
+Look at the correlation matrices using the two methods. Compare and comment on their differences.  
+
+```{r, fig.width=11, fig.height=4}
+
+num_cnames <- NULL
+for(cname in colnames(bike_final))
+{
+  if(class(bike_final[, cname]) != "factor")
+  {
+    num_cnames <- c(num_cnames, cname)
+  }
+}
+
+pearson <- cor(bike_final[, num_cnames])
+spearman <- cor(bike_final[, num_cnames], method = 'spearman')
+
+pearson[lower.tri(pearson)] <- NA
+spearman[lower.tri(spearman)] <- NA
 
 
+library(reshape2)
+pearson <- melt(pearson, na.rm=T)
+spearman <- melt(spearman, na.rm=T)
 
+# Heatmap
+library(ggplot2)
+p <- ggplot(data = pearson, aes(Var2, Var1, fill = value))+
+     geom_tile(color = "white")+
+     xlab('Vars')+
+     ylab('Vars')+
+     geom_text(aes(Var2, Var1, label = round(value, 3)), color = "black", size = 4) +
+     scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+       midpoint = 0, limit = c(-1,1), space = "Lab", 
+       name="Pearson\nCorrelation") +
+      theme_minimal()+ 
+     theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+        size = 12, hjust = 1))+
+     coord_fixed()
+
+s <- ggplot(data = spearman, aes(Var2, Var1, fill = value))+
+     geom_tile(color = "white")+
+     xlab('Vars')+
+     ylab('Vars')+
+     geom_text(aes(Var2, Var1, label = round(value, 3)), color = "black", size = 4) +
+     scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+       midpoint = 0, limit = c(-1,1), space = "Lab", 
+       name="Spearman\nCorrelation") +
+      theme_minimal()+ 
+     theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+        size = 12, hjust = 1))+
+     coord_fixed()
+
+grid.arrange(p, s, nrow=1)
+
+```
+
+Spearman is a modified version of Pearson correlation that converts the data into rank to estimate how well a monotonic function can describe the relationship between two variables, as per the paper by Hauke et.al. For instance, let me first convert Humidity and TempF to rank so that we can then use Pearson to compute the correlation to compare.  
+
+```{r, results='asis'}
+humidity <- rank(bike_final$Humidity)
+temp <- rank(bike_final$TempF)
+cor(data.frame(Humidity=humidity, TempF=temp))
+```
+
+I can clearly see the above result is consistent with the Spearman correlation plot.  
 
 ### Question 2    
 **Build a baseline linear model for `Tusers`, with one numerical predictor.**  
 Write down the model equation as we did in class, like  
 `Tusers` = 0.28 + 5.29 `TempF`, just as an example.
+```{r, results='markup'}
+model1 <- lm(Tusers~TempF, data=bike_final)
+summary(model1)
+Tusers <- -0.154 + 4.828 * bike_final$TempF
 
+temp <- seq(min(bike_final$TempF), max(bike_final$TempF), length.out=100)
+df2 <- data.frame(TempF=temp)
+Tusers <- predict.lm(model1, df2)
+df2 <- data.frame(TempF=temp, Tusers=Tusers)
+ggplot(bike_final, aes(x=TempF, y=Tusers)) +
+geom_point(color='blue') +
+geom_line(data=df2, color='red', lwd=1.1)
+```
 
 
 ### Question 3    
@@ -79,12 +156,101 @@ Use the correlation matrix as a guide to decide on which variables to use.
 Find and interpret the results. Also write down the model equation for the different 
 categorical factor levels on separate lines.
 
+In order to build a linear model with one numerical and a categorical variable with correlation into account, I believe it would be appropriate to first look at the correlation between all variables including numerical and categorical by converting all of them into rank order.  
+```{r}
 
+bike_final2 <- bike_final
+bike_final2$Season <- rank(bike_final2$Season)
+bike_final2$Holiday <- rank(bike_final2$Holiday)
+bike_final2$Day <- rank(bike_final2$Day)
+bike_final2$Workday <- rank(bike_final2$Workday)
+bike_final2$Weather <- rank(bike_final2$Weather)
+bike_final2$TempF <- rank(bike_final2$TempF)
+bike_final2$Humidity <- rank(bike_final2$Humidity)
+bike_final2$Wind <- rank(bike_final2$Wind)
+bike_final2$Tusers <- rank(bike_final2$Tusers)
+
+corrplot::corrplot(cor(bike_final2),
+                   method='number',
+                   type='lower')
+
+```
+
+I think we are now in a good shape to create a linear model with one continuous and a categorical variable with at least 3 levels. The categorical variable that is next highly correlated with Tusers would be Season (with 4 levels).  
+
+```{r, results='markup'}
+model2 <- lm(Tusers~TempF+Season, data=bike_final)
+summary(model2)
+
+s2_b <- bike_final$Season == 2
+s3_b <- bike_final$Season == 3
+s4_b <- bike_final$Season == 4
+
+tusers <- -45.197 + 5.576*bike_final$TempF - 55.725*bike_final$s2_b + 59.523*bike_final$s3_b -16.011*bike_final$s4_b
+```
+
+Since season is a categorial variable with 4 levels, 3=n.levels-1 coefficients are used along with TempF to make the final prediction. If Season2, Season3 and Season4 all are False, then it is assumed that Season1 must be activated and this is adjusted in the Intercept term.  
+
+If Season1 then `Tusers` = -45.197 + 5.576 `TempF`  
+   Season2 then `Tusers` = -45.197 + 5.576 `TempF` - 55.725 `Season2`
+   Season3 then `Tusers` = -45.197 + 5.576 `TempF` + 59.523 `Season3`
+   Season4 then `Tusers` = -45.197 + 5.576 `TempF` - 16.011 `Season4`
 
 ### Question 4  
 **Next extend the previous model for `Tusers`, but include the interaction term between the numerical and categorical variable.**  
 Again, write down the model equation for different categorical factor levels on separate lines. Comment of the slope and coefficients. 
 
+"But" in the line - extend the model "but" include the interaction..., is slightly confusing.  
+Again, "slope and coefficients" ? You mean bias/intercept and coefficients/slopes ?  
+
+```{r, results='markup'}
+model3 <- lm(Tusers~TempF+Season+TempF:Day, data=bike_final)
+summary(model3)
+```
+
+If Day0 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2`
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037  `Season3`
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4`
+   
+If Day1 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`                    - 1.177 `TempF`*`Day1`  
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2` - 1.177 `TempF`*`Day1`  
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037 `Season3` - 1.177 `TempF`*`Day1`  
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4` - 1.177 `TempF`*`Day1`  
+
+If Day2 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`                    - 1.211 `TempF`*`Day2`  
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2` - 1.211 `TempF`*`Day2`  
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037 `Season3` - 1.211 `TempF`*`Day2`  
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4` - 1.211 `TempF`*`Day2`  
+   
+If Day3 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`                    - 1.412 `TempF`*`Day3`  
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2` - 1.412 `TempF`*`Day3`  
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037 `Season3` - 1.412 `TempF`*`Day3`  
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4` - 1.412 `TempF`*`Day3`  
+   
+If Day4 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`                    - 1.254 `TempF`*`Day4`  
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2` - 1.254 `TempF`*`Day4`  
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037 `Season3` - 1.254 `TempF`*`Day4`  
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4` - 1.254 `TempF`*`Day4`  
+   
+If Day5 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`                    - 0.491 `TempF`*`Day5`  
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2` - 0.491 `TempF`*`Day5`  
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037 `Season3` - 0.491 `TempF`*`Day5`  
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4` - 0.491 `TempF`*`Day5`  
+
+If Day6 and  
+   Season1 then `Tusers` = -59.437 + 6.575 `TempF`                    - 0.184 `TempF`*`Day6`  
+   Season2 then `Tusers` = -59.437 + 6.575 `TempF` - 60.758 `Season2` - 0.184 `TempF`*`Day6`  
+   Season3 then `Tusers` = -59.437 + 6.575 `TempF` + 59.037 `Season3` - 0.184 `TempF`*`Day6`  
+   Season4 then `Tusers` = -59.437 + 6.575 `TempF` - 12.502 `Season4` - 0.184 `TempF`*`Day6`  
+
+The intercept accounts for both Day0 and Season1, while the values of the interaction term has an opposite effect on the response variable i.e., they are negatively correlated.  
 
 ### Question 5  
 **Let us use this model equation `Tusers ~ TempF + Season + Wind:Weather + Season:Weather`.**  
@@ -92,21 +258,26 @@ Notice the presence/absence of coefficients for the base-level categories.
 No need to write down the model equations this time. But comment on what is the difference 
 between how the base-level is handled here and the previous models. 
 
+For this particular model, I am able to see `Wind`:`Weather1`, whereas in the previous models, the coefficient for the first level of a categorical variable is always adjusted in the intercept.  
 
 
 ### Question 6  
 **Compare the above models using ANOVA**  
 Interpret and comment on your results. 
-
+```{r, results='markup'}
+anova.model <- anova(model1, model2, model3)
+anova.model
+```
  
-
+The subsequent expansion to the model shows statistical significance between their residuals. In other words, the model has improved. 
 
 ### Question 7   
 **Try build a model with three categorical variables only, and their interaction terms.**  
 What are we really getting?  Describe and explain. 
   
-
-
-
+```{r, results='markup'}
+last_model <- lm(Tusers~(Season+Weather+Workday)^2, data=bike_final)
+summary(last_model)
+```
 
 
