@@ -1,0 +1,194 @@
+---
+title: "Intro to DS - LM part II factor regressors"
+author: "Edwin Lo, GWU Intro to Data Science DATS 6101"
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# HW assignment
+
+## Linear model - categorical regressors 
+
+Let us re-analyze the problem we had from last time, but include categorical regressors. First, 
+import the data, and change those appropriate ones to factors.
+
+```{r}
+bikeorig = data.frame(read.csv("bikedata.csv"))
+bike = subset(bikeorig, select = -c(Date, Casual.Users, Registered.Users)) # remove irrelevant columns
+colnames(bike)[4:11] = c("Day","Workday","Weather","TempF","TempxFF","Humidity","Wind","Tusers") # rename some columns
+bike16 = subset(bike, bike$Hour == 16) # with only Hour-16 data. All columns are numerical
+nrow(bike16)
+bike16$Hour = NULL # Hour has only one value '16' now. No need to keep this column.
+bike16$TempxFF = NULL 
+bike_final = bike16
+bike_final$Season = factor(bike16$Season)
+bike_final$Holiday = factor(bike16$Holiday)
+bike_final$Day = factor(bike16$Day)
+bike_final$Workday = factor(bike16$Workday)
+bike_final$Weather = factor(bike16$Weather)
+str(bike_final) # Same as bike16 except some columns are now factor level.
+```
+
+### Question 0  
+**Pearson vs Spearman**  
+Read the article here:  
+Hauke,J. & Kossowski,T.(2011). [Comparison of Values of Pearson's and Spearman's 
+Correlation Coefficients on the Same Sets of Data. 
+Quaestiones Geographicae, 30(2) 87-93](https://doi.org/10.2478/v10117-011-0021-1).  
+
+I have read the article. 
+
+### Question 1  
+**Compare the difference of the correlation matrix between the Pearson and Spearman methods**  
+Look at the correlation matrices using the two methods. Compare and comment on their differences.
+
+```{r}
+library(corrplot)
+library(dplyr)
+
+# Spearmans
+
+corrplot.mixed(cor(bike16, use = "pairwise.complete.obs", method = "spearman"),
+               title= 'Spearman Correlation Matrix',
+               tl.col = "black", 
+               lower.col = "black",
+               number.cex = .7,
+               tl.cex=1 )
+
+# Pearsons
+
+corrplot.mixed(cor(bike16, use = "pairwise.complete.obs", method = "pearson"),
+               title= 'Pearson Correlation Matrix',
+               tl.col = "black", 
+               lower.col = "black",
+               number.cex = .7,
+               tl.cex=1 )
+```
+
+There are some slight differences in the correlation coefficients shown by the two tests. This is expected because, spearman's is better at handling categorical variables than pearson's. For instance, looking at Tusers, on avearge the spearman's test shows a slightly more consevative correlation estimate than the pearsons test.  
+
+### Question 2    
+**Build a baseline linear model for `Tusers`, with one numerical predictor.**  
+Write down the model equation as we did in class, like  
+`Tusers` = 0.28 + 5.29 `TempF`, just as an example.
+
+```{r}
+
+mod1 <- lm(Tusers~Humidity, data=bike_final)
+summary(mod1)
+
+```
+
+`Tusers` = 417.42 - 2.13 `Humidity`
+
+For every 1% increase in humidity, the number of total users witll increase by about 2. 
+
+### Question 3    
+**Build a linear model for `Tusers`, with one numerical and one categorical predictor with at least 3 levels.**  
+Use the correlation matrix as a guide to decide on which variables to use. 
+Find and interpret the results. Also write down the model equation for the different 
+categorical factor levels on separate lines.
+
+```{r}
+mod2 <- lm(Tusers~Humidity+Weather, data=bike_final)
+summary(mod2)
+
+```
+
+`Tusers` = 373.284 -0.880 `Humidity` - 21.825 `Weather 2`
+`Tusers` = 373.284 -0.880 `Humidity` -135.812 `Weather 3`
+`Tusers` = 373.284 -0.880 `Humidity` -255.456 `Weather 4`
+
+All the independent variables (humidity and the different levels of weather) are statistically significant. This means that changes in the independent variables are associated with changes in the dependent variable (Tusers). 
+
+### Question 4  
+**Next extend the previous model for `Tusers`, but include the interaction term between the numerical and categorical variable.**  
+Again, write down the model equation for different categorical factor levels on separate lines. Comment of the slope and coefficients. 
+
+```{r}
+
+mod3 <-lm(Tusers~Humidity+Season + Humidity:Season, data=bike_final)
+summary(mod3)
+```
+`Tusers` = 414.46 - 2.04 `Humidity` - 50.92  `Seasson 2` - 0.08 `Humidity:Season2`
+`Tusers` = 414.46 - 2.04 `Humidity` - 177.73 `Seasson 3` - 2.06 `Humidity:Season3`
+`Tusers` = 414.46 - 2.04 `Humidity` - 181.84 `Seasson 4` - 1.24 `Humidity:Season4`
+
+Assuming ceteris paribus, 
+For every 1% increase in humidity, Tusers will decrease by about 2 users
+If it is Season 2, then Tusers will increase by about 50 users.
+If it is Season 3, then Tusers will increase by about 177 users.
+If it is Season 4 (probably fall/winter), then Tusers will decrease by about 182 users.
+
+If humidity increases by 1% and it is season 2, then Tusers will likely not change. According to the p-value between the interaction of the two variables is not enough to have a statistically significant affect on Tusers.
+
+If humidity increases by 1% and it is season 3, then Tusers will likely fall by 2 users. According to the p-value between the interaction of the two variables does have a statistically significant affect on Tusers at the 1% significance level.
+
+If humidity increases by 1% and it is season 4, then Tusers probably decrease by 1 user. However note that the p-value between the interaction of the two variables is not statistically significant at the 5% level but is significant at the 10% level.  
+
+### Question 5  
+**Let us use this model equation `Tusers ~ TempF + Season + Wind:Weather + Season:Weather`.**  
+Notice the presence/absence of coefficients for the base-level categories. 
+No need to write down the model equations this time. But comment on what is the difference 
+between how the base-level is handled here and the previous models. 
+
+```{r}
+mod4 <- lm(Tusers ~ TempF + Season + Wind:Weather + Season:Weather, data = bike_final)
+summary(mod4)
+
+```
+In the previous models, we had base coefficients and then had interactions between them.
+In the current model, we have the base terms of Temp  and Season, but an interaction term is not included.On the otherhand, the variables Wind and Weather do not have base terms but only are included as part of the interactions terms.
+
+We can also see that weather 4 with Season interaction term gives us NA value. Indicating that there is perfect collinearity between weather 4 and one of the season levels. 
+
+
+### Question 6  
+**Compare the above models using ANOVA**  
+Interpret and comment on your results. 
+
+```{r}
+anova_all <-anova (mod1,mod2, mod3,mod4)
+anova_all
+str(anova_all)
+xkabledply(anova_all, title = "ANOVA comparison between the models")
+
+```
+From the p-values, we can see that the differences between all the models are statistically significant. As the degrees of freedom changes and the RSS decreases, indicating that the addition of the variables are significant. 
+
+### Question 7   
+**Try build a model with three categorical variables only, and their interaction terms.**  
+What are we really getting?  Describe and explain. 
+  
+```{r}
+mod5 <- lm(Tusers ~ Season + Workday + Weather + 
+             Season:Workday +
+             Season:Weather+
+             Workday:Weather, data = bike_final)
+summary(mod5)
+```
+We can see that not all of the coefficients are have a statistically significant effect on Tusers. This is because the categorical coefficients are not necessarily slope estimates. They are the average value of the subgroups occurring at the same time. 
+
+
