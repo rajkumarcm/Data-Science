@@ -262,6 +262,11 @@ Notice the presence/absence of coefficients for the base-level categories.
 No need to write down the model equations this time. But comment on what is the difference 
 between how the base-level is handled here and the previous models. 
 
+```{r, results='markup'}
+tmp_model <- lm(Tusers ~ TempF + Season + Wind:Weather + Season:Weather, data=bike_final)
+summary(tmp_model)
+```
+
 For this particular model, I am able to see `Wind`:`Weather1`, whereas in the previous models, the coefficient for the first level of a categorical variable is always adjusted in the intercept. There is also singularity in this model that I have explained in the last question.  
 
 
