@@ -1,0 +1,365 @@
+---
+title: "Logit Regression"
+author: "GWU Intro to Data Science DATS 6101"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r include=FALSE}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+ 
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r base_lib}
+loadPkg("ggplot2")
+```
+
+# LogRegAdmit Dataset (Admissions data)
+
+## Initialize
+
+```{r}
+Admit <- data.frame(read.csv("LogRegAdmit.csv")) 
+head(Admit)
+summary(Admit)
+```  
+Let us first use the dataset that we are familiar with -- admissions dataset. We have looked at it many different times, using different techniques and methods. We will first re-visit those methods as practices, then try our new logistic regression model. Other than logistic regression, there are yet many more we can learn to analyse the same piece of information. We can use use Tree/Forest methods, KNN, SVM, etc. They all have their strength and weaknesses. First, let us load up the dataframe and take a quick look at the `head()` and `summary()`. Current settings do not show these output in html.  
+```{r results='markup'}
+xkablesummary(Admit)
+```
+
+We can also find sd or other statistics of the variables using the `sapply()` function, and display as a table.    
+```{r sapply}
+# find  sd for all columns, using sapply
+varSD = sapply(Admit, sd)
+varSD
+```  
+
+```{r results='markup'}
+xkabledply(as.table(varSD), title = "The sd for each variable in Admit", wide = TRUE)
+```
+
+
+## Effects on Admission by rank
+
+To study the effects on admission by the factor rank (admit and rank are both categorical variables), wee can create two-way contingency table of the outcome and predictors, and make sure there are no cells of zero frequencies.  
+```{r crosstable}
+admitranktable = xtabs(~ admit + rank, data = Admit)
+admitranktable
+```
+
+### Chi squared test
+
+We can then quickly run a chi-squared test to see if the two are independent (or same frequency distribution).  
+```{r chisq}
+chisqres = chisq.test(admitranktable)
+chisqres
+```
+
+From the small p-value of `r chisqres$p.value`, we conclude that the admited and rejected subgroups have different frequency distribution among the ranks. This is just another way of saying that the ranks and admit/rejected are NOT independent. Of course, we can also look at the acceptance rate for the different ranks and compare. These are left as separate tasks for a thorough analysis.
+
+## Logistic Regression Model
+
+Let us now turn our attention to logistic regression models. Knowing that there is very like an effect on admission by ranks, we run the full model including rank as well as GRE and GPA.  
+```{r logitmodel}
+Admit$admit <- factor(Admit$admit)
+Admit$rank <- factor(Admit$rank)
+admitLogit <- glm(admit ~ gre + gpa + rank, data = Admit, family = "binomial")
+# admitLogit <- glm(admit ~ gre + gpa + rank, data = Admit, binomial(link = "logit") )  # same result, slightly different syntax
+```
+
+We can see the summary of the logit model here:  
+```{r}
+summary(admitLogit)
+```  
+```{r results='markup'}
+xkabledply(admitLogit, title = paste("Logistic Regression :", format(formula(admitLogit)) ))
+```
+
+
+All the coefficients are found significant (small p-values). GRE and GPA have positive effects on admission chance (admit = 1), while "higher" rank (rank = 4 is highest) negatively affect the admission's likelihood. These are reasonable results and confirms our common beliefs.  
+
+We can also easily obtain the growth/decay factors for each explanatory variables. Notice that these factors apply to the odds-ratio, not the odds of being accepted. Nonetheless, these growth and decay factors are very useful in our analysis. The factors are the exponentials of the coefficients:   
+
+```{r growthDecayFactors, results='markup', collapse=F}
+expcoeff = exp(coef(admitLogit))
+# expcoeff
+xkabledply( as.table(expcoeff), title = "Exponential of coefficients in Logit Reg" )
+```
+
+From these results, we can say, for example:
+
+* The log(odds-ratio) for being admitted improve by a factor of `r format(expcoeff[2],digit=6)` for each point of gre score increase. Notice that for a, say 20-point gre improvement, the chance of being admitted is changed not 20 times that value. Instead, the log(odds-ratio) improved by a factor of $(`r format(expcoeff[2],digit=6)`)^{20}$.  
+* The improvement of gpa of 1 point will increase the log(odds-ratio) much better by a factor of `r format(expcoeff[3],digit=4)`. It is not easy to improve GPA by a point, however.  
+* The effect of being from a rank-2 school, compared to rank-1, is hurting by a factor of `r format(expcoeff[4],digit=4)`, for the log(odds-ratio).  Any factor less than 1 represents a negative effect.
+* The effect of being from a rank-3 school, compared to rank-1, is hurting even more, by a factor of `r format(expcoeff[5],digit=4)`, again, for the log(odds-ratio).  
+* Lastly, the effect of being from a rank-4 school, compared to rank-1, changes the log(odds-ratio) by a factor of `r format(expcoeff[6],digit=4)`.  
+
+Before moving on, let us look at the model object `admitLogit` a little deeper. The fitted values can be found from `admitLogit$fitted.values`. 
+And the first fitted value is `r admitLogit$fitted.values[1]`. This is the probability of being admitted for data point #1. 
+Compare to the value from `predict(admitLogit)` to be `r predict(admitLogit)[1]`. The `predict()` function 
+gives us the logit value. You can exponentiate to get the odds ratio p/q as `r exp(predict(admitLogit)[1])`. 
+And finally, we can find p from p/q, and indeed it is confirmed to be `r 1/(1+exp(-predict(admitLogit)[1]))`.
+
+The easier way to get that is simply use `predict(admitLogit, type = c("response"))[1]` = `r predict(admitLogit, type = "response" )[1]`. The `predict()` function will also allow you to find model prediction with unseen/untrained data points where `fitted.values` do not give.
+
+```{r logit_fitted_value}
+admitLogit$fitted.values[1]
+# OR 
+predict(admitLogit)[1]  # gives you the logit(p) or ln(p/q) value
+1/(1+exp(-predict(admitLogit)[1]))
+# OR 
+predict(admitLogit, type = "response")[1]
+```
+
+A quick summary, these three ways all calculate the same thing, which is the predicted values from the model. 
+
+* This gives you the fitted value for *p* directly: `admitLogit$fitted.values[1]` = `r admitLogit$fitted.values[1]`  
+* Or you can first calculate the predicted value for ln(*p*/*q*): `predict(admitLogit)[1]` = `r predict(admitLogit)[1]`  
+Then find the *p* value from: `1/(1+exp(-predict(admitLogit)[1]))` = `r 1/(1+exp(-predict(admitLogit)[1]))`
+* Or use the built-in type option in predict( ) to get the *p* value: `predict(admitLogit, type = "response")[1]` = `r predict(admitLogit, type = "response")[1]`
+
+
+### Confidence Intervals
+
+We can easily determin the confidence intervals of each coefficient with these two slightly different ways:  
+```{r ConfInt, results='markup', collapse=F}
+## CIs using profiled log-likelihood
+# confint(admitLogit)
+xkabledply( confint(admitLogit), title = "CIs using profiled log-likelihood" )
+## CIs using standard errors
+# confint.default(admitLogit)
+xkabledply( confint.default(admitLogit), title = "CIs using standard errors" )
+```
+
+
+### Model evaluation
+#### Confusion matrix 
+
+This is just one of the many libraries you can find the confusion matrix. It is easy to use, but not very powerful, lacking ability to choose cutoff value, and it does not give you all the metrics like accuracy, precision, recall, sensitivity, f1 score etc. Nonetheless, it's handy.
+
+```{r confusionMatrix, results='markup'}
+loadPkg("regclass")
+# confusion_matrix(admitLogit)
+xkabledply( confusion_matrix(admitLogit), title = "Confusion matrix from Logit Model" )
+unloadPkg("regclass")
+```
+
+#### Hosmer and Lemeshow test  
+
+The Hosmer and Lemeshow Goodness of Fit test can be used to evaluate logistic regression fit. 
+
+```{r HosmerLemeshow}
+loadPkg("ResourceSelection") # function hoslem.test( ) for logit model evaluation
+admitLogitHoslem = hoslem.test(Admit$admit, fitted(admitLogit)) # Hosmer and Lemeshow test, a chi-squared test
+unloadPkg("ResourceSelection") 
+```
+
+The result is shown here:  
+```{r HosmerLemeshowRes, results='markup', collapse=F}
+admitLogitHoslem
+# Have not found a good way to display it.
+```
+
+The p-value of `r admitLogitHoslem$p.value` is relatively high. This indicates the model is not really a good fit, despite all the coefficients are significant. 
+
+#### Receiver-Operator-Characteristic (ROC) curve and Area-Under-Curve (AUC)
+
+Receiver-Operator-Characteristic (ROC) curve and Area-Under-Curve (AUC) measures the true positive rate (or sensitivity) against the false positive rate (or specificity). The area-under-curve is always between 0.5 and 1. Values higher than 0.8 is considered good model fit.  
+```{r roc_auc}
+loadPkg("pROC") # receiver operating characteristic curve, gives the diagnostic ability of a binary classifier system as its discrimination threshold is varied. The curve is on sensitivity/recall/true-positive-rate vs false_alarm/false-positive-rate/fall-out.
+prob=predict(admitLogit, type = "response" )
+Admit$prob=prob
+h <- roc(admit~prob, data=Admit)
+auc(h) # area-under-curve prefer 0.8 or higher.
+plot(h)
+# unloadPkg("pROC")
+```
+
+
+We have here the area-under-curve of `r auc(h)`, which is less than 0.8. This test also agrees with the Hosmer and Lemeshow test that the model is not considered a good fit. 
+
+```{r}
+unloadPkg("pROC")
+```
+
+#### McFadden  
+
+McFadden is another evaluation tool we can use on logit regressions. This is part of what is called pseudo-R-squared values for evaluation tests. We can calculate the value directly from its definition if we so choose to.
+
+```{r McFadden_direct}
+admitNullLogit <- glm(admit ~ 1, data = Admit, family = "binomial")
+mcFadden = 1 - logLik(admitLogit)/logLik(admitNullLogit)
+mcFadden
+```
+
+Or we can use other libraries. The `pscl` (Political Science Computational Lab) library has the function `pR2()` (pseudo-$R^2$) will do the trick.  
+
+```{r McFadden}
+loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
+admitLogitpr2 = pR2(admitLogit)
+admitLogitpr2
+unloadPkg("pscl") 
+```
+
+With the McFadden value of `r admitLogitpr2['McFadden']`, which is analogous to the coefficient of determination $R^2$, only about 8% of the variations in y is explained by the explanatory variables in the model. 
+
+A major weakness of the overall model is likely from the small dataset sample size of `r length(Admit$admit)`. We expect a much higher number of observations will increase the sensitivity of the model.
+
+
+## Alternate Chi-squared test on ranks
+
+This part is followed closely from <http://statcomp.ats.ucla.edu/stat/r/dae/logit.htm>.
+
+We can test for an overall effect of rank using the wald.test function of the aod library. The order in which the coefficients are given in the table of coefficients is the same as the order of the terms in the model. This is important because the wald.test function refers to the coefficients by their order in the model. We use the wald.test function. b supplies the coefficients, while Sigma supplies the variance covariance matrix of the error terms, finally Terms tells R which terms in the model are to be tested, in this case, terms 4, 5, and 6, are the three terms for the levels of rank.  
+```{r WaldTest}
+loadPkg("aod")  # Analysis of Overdispersed Data, used wald.test in logit example
+wald.test(b = coef(admitLogit), Sigma = vcov(admitLogit), Terms = 4:6)
+```
+
+The chi-squared test statistic of 20.9, with three degrees of freedom is associated with a p-value of 0.00011 indicating that the overall effect of rank is statistically significant.
+
+We can also test additional hypotheses about the differences in the coefficients for the different levels of rank. Below we test that the coefficient for rank=2 is equal to the coefficient for rank=3. The first line of code below creates a vector l that defines the test we want to perform. In this case, we want to test the difference (subtraction) of the terms for rank=2 and rank=3 (i.e., the 4th and 5th terms in the model). To contrast these two terms, we multiply one of them by 1, and the other by -1. The other terms in the model are not involved in the test, so they are multiplied by 0. The second line of code below uses L=l to tell R that we wish to base the test on the vector l (rather than using the Terms option as we did above).
+```{r}
+l <- cbind(0, 0, 0, 1, -1, 0)
+wald.test(b = coef(admitLogit), Sigma = vcov(admitLogit), L = l)
+```
+The chi-squared test statistic of 5.5 with 1 degree of freedom is associated with a p-value of 0.019, indicating that the difference between the coefficient for rank=2 and the coefficient for rank=3 is statistically significant.
+
+You can also exponentiate the coefficients and interpret them as odds-ratios. R will do this computation for you. To get the exponentiated coefficients, you tell R that you want to exponentiate (exp), and that the object you want to exponentiate is called coefficients and it is part of mylogit (coef(mylogit)). We can use the same logic to get odds ratios and their confidence intervals, by exponentiating the confidence intervals from before. To put it all in one table, we use cbind to bind the coefficients and confidence intervals column-wise.
+
+
+```{r}
+## odds ratios and 95% CI
+exp(cbind(OR = coef(admitLogit), confint(admitLogit)))
+```
+Now we can say that for a one unit increase in gpa, the odds ratio of being admitted to graduate school (versus not being admitted) increase by a factor of 2.23. Note that while R produces it, the odds ratio for the intercept is not generally interpreted.
+
+You can also use predicted probabilities to help you understand the model. Predicted probabilities can be computed for both categorical and continuous predictor variables. In order to create predicted probabilities we first need to create a new data frame with the values we want the independent variables to take on to create our predictions.
+
+We will start by calculating the predicted probability of admission at each value of rank, holding gre and gpa at their means. First we create and view the data frame.
+
+```{r}
+newdata1 <- with(Admit, data.frame(gre = mean(gre), gpa = mean(gpa), rank = factor(1:4)))
+
+## view data frame
+newdata1
+```
+These objects must have the same names as the variables in your logistic regression above (e.g. in this example the mean for gre must be named gre). Now that we have the data frame we want to use to calculate the predicted probabilities, we can tell R to create the predicted probabilities. The first line of code below is quite compact, we will break it apart to discuss what various components do. The newdata1$rankP tells R that we want to create a new variable in the dataset (data frame) newdata1 called rankP, the rest of the command tells R that the values of rankP should be predictions made using the predict( ) function. The options within the parentheses tell R that the predictions should be based on the analysis mylogit with values of the predictor variables coming from newdata1 and that the type of prediction is a predicted probability (type="response"). The second line of the code lists the values in the data frame newdata1. Although not particularly pretty, this is a table of predicted probabilities.
+
+```{r}
+newdata1$rankP <- predict(admitLogit, newdata = newdata1, type = "response") 
+# type = c("link","response", "terms") # returns the link function value (the log-odds), the response variable (probability p), and the individual linear term combo respectively.
+newdata1
+```
+
+In the above output we see that the predicted probability of being accepted into a graduate program is 0.52 for students from the highest prestige undergraduate institutions (rank=1), and 0.18 for students from the lowest ranked institutions (rank=4), holding gre and gpa at their means. We can do something very similar to create a table of predicted probabilities varying the value of gre and rank. We are going to plot these, so we will create 100 values of gre between 200 and 800, at each value of rank (i.e., 1, 2, 3, and 4).
+
+```{r}
+newdata2 <- with(Admit, data.frame(gre = rep(seq(from = 200, to = 800, length.out = 100), 4), gpa = mean(gpa), rank = factor(rep(1:4, each = 100))))
+```
+The code to generate the predicted probabilities (the first line below) is the same as before, except we are also going to ask for standard errors so we can plot a confidence interval. We get the estimates on the link scale and back transform both the predicted values and confidence limits into probabilities.
+
+```{r}
+newdata3 <- cbind(newdata2, predict(admitLogit, newdata = newdata2, type = "link", se = TRUE))
+newdata3 <- within(newdata3, {
+    PredictedProb <- plogis(fit)
+    LL <- plogis(fit - (1.96 * se.fit))
+    UL <- plogis(fit + (1.96 * se.fit))
+})
+
+## view first few rows of final dataset
+head(newdata3)
+```
+It can also be helpful to use graphs of predicted probabilities to understand and/or present the model. We will use the ggplot2 package for graphing. Below we make a plot with the predicted probabilities, and 95% confidence intervals.
+
+```{r}
+ggplot(newdata3, aes(x = gre, y = PredictedProb)) + geom_ribbon(aes(ymin = LL,
+    ymax = UL, fill = rank), alpha = 0.2) + geom_line(aes(colour = rank),
+    size = 1)
+```
+We may also wish to see measures of how well our model fits. This can be particularly useful when comparing competing models. The output produced by summary(mylogit) included indices of fit (shown below the coefficients), including the null and deviance residuals and the AIC. One measure of model fit is the significance of the overall model. This test asks whether the model with predictors fits significantly better than a model with just an intercept (i.e., a null model). The test statistic is the difference between the residual deviance for the model with predictors and the null model. The test statistic is distributed chi-squared with degrees of freedom equal to the differences in degrees of freedom between the current and the null model (i.e., the number of predictor variables in the model). 
+
+
+
+# Feature Selections on Logit Models (Bikeshare)  
+See [this link](https://rstudio-pubs-static.s3.amazonaws.com/2897_9220b21cfc0c43a396ff9abf122bb351.html) as an example how to use the features in the library **bestglm**.  
+A few things to note:  
+1. The outcome variable must be named y  
+2. No extraneous variables should be present in the dataset  
+As a result, it is typical to reformat the data as such.  
+
+Let us try to work with the bikeshare data that we are familiar with. Say we try to use the dataset, and use it to predict a particular day is a holiday or not (binary outcome) from the other relevant infomation. 
+In order to use the library `bestglm` properly, we need to rename the y-variable from `Holiday` to `y`.
+
+```{r featureSelect}
+# bikeorig <- read.csv("bikedata.csv")
+bikeorig <- data.frame(read.csv("bikedata.csv")) # make no difference here
+# head(bikeorig)
+str(bikeorig)
+bikepeak <- subset(bikeorig,subset=(bikeorig$Hour >14 & bikeorig$Hour < 18)) # only the three peak hours
+colnames(bikepeak)[5:14] <- c("day","workday","weather","tempF","tempFF","humidity","wind","cusers","rusers","tusers") # rename some columns
+bikeclean = bikepeak[ , c("Season", "day", "workday", "weather", "tempFF", "humidity", "wind", "tusers")] # only take eight columns Hour, day, workday, weather, tempFF, humidity, wind, tusers
+bikeclean$y = bikepeak[,4] # copy Holiday column and call it 'y'
+#convert some columns into factos as appropriate
+bikeclean$Season = factor(bikeclean$Season)
+bikeclean$day = factor(bikeclean$day)
+bikeclean$workday = factor(bikeclean$workday)
+bikeclean$weather = factor(bikeclean$weather)
+bikeclean$y <- ifelse(bikeclean$y == 1,TRUE,FALSE)
+bikeclean$y = factor(bikeclean$y)
+str(bikeclean)
+```
+
+First try using the package "leaps" which we learned before (for regular linear regressions). 
+```{r leaps}
+loadPkg("leaps")
+reg.leaps <- regsubsets(y~., data = bikeclean, nbest = 1, method = "exhaustive")  # leaps, 
+plot(reg.leaps, scale = "adjr2", main = "Adjusted R^2")
+plot(reg.leaps, scale = "bic", main = "BIC")
+plot(reg.leaps, scale = "Cp", main = "Cp")
+```
+
+Although the codes run, and we were given a result, but it hardly make any sense. The best models involve some combinations of `Season`, `day`, and `workday1`. The adj $R^2$, bic, 
+and $C_p$ values are jumping erratically.  Recall that the algorithm there is trying to fit the y-values with a straight line model, which is unbounded, while `Holiday` only takes on values 0 or 1.  
+
+Next try the package "bestglm" which can allow binomial response variables.   
+
+```{r bestglm, results='markup'}
+loadPkg("bestglm")
+res.bestglm <- bestglm(Xy = bikeclean, family = binomial,
+            IC = "AIC",                 # Information criteria for
+            method = "exhaustive")
+summary(res.bestglm)
+res.bestglm$BestModels
+summary(res.bestglm$BestModels)
+unloadPkg("bestglm") 
+unloadPkg("leaps") # leaps is required by bestglm, thus cannot be unloaded before bestglm
+```
+
+The result here is much more sensible.  The best model has AIC of 14, with only variables `day` and `workday`.  
+Using the bikeshare data might not be the best example, but at least we can see how the process works.  
+
+```{r cleanup}
+unloadPkg("pROC") 
+unloadPkg("aod") 
+```
