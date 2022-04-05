@@ -123,20 +123,70 @@ And finally, we can find p from p/q, and indeed it is confirmed to be `r 1/(1+ex
 The easier way to get that is simply use `predict(admitLogit, type = c("response"))[1]` = `r predict(admitLogit, type = "response" )[1]`. The `predict()` function will also allow you to find model prediction with unseen/untrained data points where `fitted.values` do not give.
 
 ```{r logit_fitted_value}
-admitLogit$fitted.values[1]
-# OR 
-predict(admitLogit)[1]  # gives you the logit(p) or ln(p/q) value
-1/(1+exp(-predict(admitLogit)[1]))
-# OR 
-predict(admitLogit, type = "response")[1]
+p_fitted = admitLogit$fitted.values[1] # this is the model predicated value p-hat for the first data row (not the actual data point p)  
+```  
+This is stored in the model as the fitted value for the probability `p` of the 
+first data point. Since the actual data point is a 0/1 True/False value, it 
+is not easy to directly compare them unless we use a cutoff value (default 
+as 0.5) to convert the probability `p` to 0/1. 
+
+Now, for unseen data point, we can use the `predict( )` function to find the 
+model predicted values. 
+But be careful of what you are getting with the `predict()` function in classification 
+models. 
+Let us compare the three options below. For easy comparison, let us use the 
+same data point in the dataset as an example. 
+
+```{r}
+# This gives you the predicted values of the data points inside the model.
+predict(admitLogit)  # the is from the model, which gives you the value for logit(p) or ln(p/q) 
 ```
 
-A quick summary, these three ways all calculate the same thing, which is the predicted values from the model. 
+```{r}
+# To get new data points, we can do these
+newdata1 <- data.frame(gre = 380, gpa = 3.61, rank = as.factor(3)) # new data frame with 1 row
+predict(admitLogit, newdata = newdata1)
+# The default option is "link", with gives you the value of the link function, 
+# in this case, logit(p) or log(p/1-p) value
+predict(admitLogit, newdata = newdata1, type = "link") -> pred_link # same as predict(admitLogit, newdata = newdata1)
+paste("This is pred_link: ",pred_link) 
 
-* This gives you the fitted value for *p* directly: `admitLogit$fitted.values[1]` = `r admitLogit$fitted.values[1]`  
-* Or you can first calculate the predicted value for ln(*p*/*q*): `predict(admitLogit)[1]` = `r predict(admitLogit)[1]`  
-Then find the *p* value from: `1/(1+exp(-predict(admitLogit)[1]))` = `r 1/(1+exp(-predict(admitLogit)[1]))`
-* Or use the built-in type option in predict( ) to get the *p* value: `predict(admitLogit, type = "response")[1]` = `r predict(admitLogit, type = "response")[1]`
+predict(admitLogit, newdata = newdata1, type = "response") -> pred_response 
+paste("This is pred_response: ",pred_response)
+
+predict(admitLogit, newdata = newdata1, type = "term") -> pred_term
+paste("This is pred_term, which is a vector with three values, plus the y-intercept term, called `attribute`")
+pred_term 
+# attr(pred_term,"constant")
+```
+**The three options for the `predict()` function in Logit regression:**  
+
+* The "response" option `predict(model, newdata=..., type="response") -> pred_response` nicely gives you the probability *p* directly as `r pred_response`.  
+* The "link" option `predict(model, newdata=..., type="link") -> pred_link` which is the default option, gives you the value of the link function. Remember the link function is  
+`logit(p) = log(p/q) = log(p/1-p)`. The value here is `r pred_link`.  
+* The third option of "term", `predict(model, newdata=..., type="term") -> pred_term`, gives you the individual term contributions. Notice 
+that the constant is also in this "term" object, but it is difficult to use. 
+The three terms (slopes) are like values in a vector here: `pred_term` = [`r pred_term`], while the "intercept term $b_0$" is stored as an attribute `attr(pred_term,"constant")`: `r attr(pred_term,"constant")`.  
+Note that the sum of all these four values equal to the value of the link function above: `r pred_term[1]` + `r pred_term[2]` + `r pred_term[3]` + `r attr(pred_term,"constant")` = `r sum(pred_term) + attr(pred_term,"constant")`. 
+
+
+```{r}
+# But this is not "y-value" p that we want to compare to.  
+# These three things are the same: 
+# 1. using the response option:
+predict(admitLogit, newdata = newdata1, type = "response")
+# 2. Using the link function value (default), to calculate the probability p-hat: 
+1/(1+exp(-predict(admitLogit, newdata = newdata1))) # 1/(1+exp(-predict(admitLogit, newdata = newdata1, type="link")))
+# 3. Find the odds-ratio first, then calculate the probability p-hat: 
+oddsratio = exp( predict(admitLogit, newdata = newdata1, type="link"))
+oddsratio / (oddsratio+1)
+```
+
+A quick summary, these different ways of calculating the same thing, which is the predicted probability values from the model. 
+
+* Use the built-in type option `predict(admitLogit, newdata=newdata1, type="response")` to get the *p* value: `r pred_response`
+* Use the link function value `predict(admitLogit, newdata = newdata1, type = "link")` (or without the type argument, since this is the default), to calculate the value *p* `from 1/(1+exp( -linkFunctionValue ))`: `r `1/(1+exp(-pred_link)`  
+* First find the odds-ratio from exponential of the link-value-function: `r oddsratio`, then calculate the predicted *p* value from `oddsratio / (oddsratio + 1)` = `r oddsratio / (oddsratio + 1)`
 
 
 ### Confidence Intervals
