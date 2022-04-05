@@ -1,0 +1,102 @@
+---
+title: "Intro to DS - Logit Regression"
+author: ""
+# date: "today"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# HW Assignment - Logit Regression
+
+We have the historic Titanic dataset to study here. The version presented has these variables: 
+
+* `survival`: Survival,	0 = No, 1 = Yes
+* `pclass`: Ticket class, 1 = 1st, 2 = 2nd, 3 = 3rd
+* `sex`: Gender / Sex
+* `age`: Age in years
+* `sibsp`: # of siblings / spouses on the Titanic
+* `parch`: # of parents / children on the Titanic
+* `ticket`: Ticket number (for superstitious ones)
+* `fare`: Passenger fare
+* `embarked`: Port of Embarkment	C: Cherbourg, Q: Queenstown, S: Southampton
+
+The questions listed here are the basic guidelines, not the only goal, in this homework. For example, after you load the dataframe, even though the question does not ask you to look at the structure of the dataframe, you most likely should. You are given less and less “specific to-dos” in the homework, as you are getting more familiar with the data analytic process. Calculate and figure out the necessary info needed in the analysis, even though the questions might not ask for them explicitly. When you look at your own work, you should find it convincing, answering the questions and technically sound.  
+
+
+## Titanic Tragedy Dataset  
+
+### Question 1
+
+**Import the dataset into R**  
+Import the dataset into R, and call it titanic_orig, and explore it little to get the overall picture of the dataset. Eventually we would like to see what affected survival in the tragedy.  
+
+
+### Question 2 
+**Age**  
+One of the main factors we will try is Age. How many missing values are there for the variable `age`? If not too many, we should just clean those up and subset those out.  
+
+### Question 3  
+**More clean up**  
+While we are cleaning up the data, if we were to use sibsp and parch in our analysis, even though they are legitimately ratio level variables, we might not expect doubling the number of siblings necessarily double the effects on survival. For this reason, we should change these two variables to factor levels. Also change the other ones that you find imported as the wrong data type.  
+
+
+## Pre-logistic Regression
+
+### Question 4  
+**Survival and age**  
+Before using our newly learned technique with logistic regression, let’s go old school, and use some prior knowledge to try find an answer. Does the data support that `age` very much affects `survival`?
+
+
+### Question 5  
+**Survival and gender**  
+Similarly, does the data support `sex` has an effect on `survival`? 
+
+
+### Question 6   
+**Survival and pclass**  
+Another big question is, does the data support Ticket class `pclass` has an effect on `survival`? 
+
+
+## Logistic Regression
+
+### Question 7   
+**Survival and age + pclass**  
+Now let us build a logit model with age+pclass as predictors, and analyze the results. Remember to do all the model evaluation steps. Is the model a good one?
+
+
+### Question 8  
+**More features**  
+Can we improve the model? Let us also throw in `sex` as a predictor. How’s the model now?
+
+
+### Question 9  
+**Sample Predictions**  
+According to the last model, what is the chance of survival for a female, age 10, second class passenger? And a male, age 20, first class passenger?
+
+## Interpretation  
+
+### Question 10  
+*Summary*  
+With all the results you obtained above, how would you present a high-level summary of the findings? Are the results surprising or expected? You might need to dig a little deeper than just the numbers, the test results/p-values, and the model statistics. This is a question about who we are, … in the face of death. 
+
