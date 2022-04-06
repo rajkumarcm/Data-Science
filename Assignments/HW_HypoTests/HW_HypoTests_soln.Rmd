@@ -79,19 +79,19 @@ xkablesummary(Adata2)
 After applying the outlierKD2 function two times on Adata, we arrived at dataframe Adata2 with those outliers removed. From the summary of Adata2, there are four NA in gre, and one in gpa.
 
 
-### Question 4
+### Question 3
 
 **Like last time, separate the two subsets again, for admitted and rejected. **
 
 We create the two subsets called admitted and rejected. 
 
 ```{r q03subset}
-admitted <- subset(Adata,admit==1)
-rejected <- subset(Adata,admit==0)
+admitted <- subset(Adata2,admit==1)
+rejected <- subset(Adata2,admit==0)
 ```
 
 
-### Question 3
+### Question 4
 
 **We were a little careless last time. Let us check for normality on the numerical variables. Let us use histogram (use `ggplot()`) and QQ-plot (use `qqnorm()`) to check the quantitative variables for the admitted and rejected subsets. Make a brief comment on the results. **
 
