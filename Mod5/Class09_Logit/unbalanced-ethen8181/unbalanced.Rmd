@@ -39,7 +39,7 @@ pre { /* Code block */
 > All the code ("unbalanced_code") and the data ("data" folder) can be found  [here](https://github.com/ethen8181/machine-learning/blob/master/unbalanced).
 
 
-This documentation focuses on choosing the optimal cutoff value for logistic regression when dealing with unbalanced dataset. Notion also applies to other classification algorithms where the model's prediction on unknown outcome can be a probability. We'll not be giving a thorough introduction on logistic regression and discussion of why not choose other algorithms to boost classification performace is also overlooked.
+This documentation focuses on choosing the optimal cutoff value for logistic regression when dealing with unbalanced dataset. Notion also applies to other classification algorithms where the model's prediction on unknown outcome can be a probability. We'll not be giving a thorough introduction on logistic regression and discussion of why not choose other algorithms to boost classification performance is also overlooked.
 
 # Getting Started 
 
@@ -69,7 +69,7 @@ library(ggplot2)
 # Might need to install devtools first if not already on system
 # Follow prompt. Use 1 or 2 to install/update other dependencies. 
 # Choose "no" to install those without needing to compile
-# Nevermind, still failed. Not working for R 4.1.1 (202111 - EL)
+# Nevermind, still failed. Not working for R 4.1.2 (202204 - EL)
 # library(ggthemr)
 library(ggthemes)
 library(gridExtra)
@@ -77,7 +77,8 @@ library(data.table)
 # setwd("/Users/ethen/machine-learning/unbalanced")
 
 # read in the dataset ("HR.csv")
-data <- fread( list.files( "data", full.names = TRUE )[2] )
+# data <- fread( list.files( "data", full.names = TRUE )[2] ) # This line depending on the system, sometimes load HR_unknown.csv instead of HR.csv file
+data = data.frame(read.csv("data/HR.csv"))
 str(data)
 
 ```
@@ -124,7 +125,8 @@ To train and evaluate the model, we'll split the dataset into two parts. 80 perc
 ```{r}
 
 # convert the newborn to factor variables
-data[ , Newborn := as.factor(Newborn) ]
+# data[ , Newborn := as.factor(Newborn) ]
+data$Newborn = as.factor(data$Newborn) 
 
 set.seed(4321)
 test <- createDataPartition( data$left, p = .2, list = FALSE )
