@@ -217,12 +217,6 @@ loadPkg("lattice") # lattice and ggplot2 combined allow us to use the "pairs" fu
 pairs(mtcars[1:10])
 ```
 
-```{r corrplot}
-corrplot::corrplot.mixed(mtcarscor,
-                         lower='number',
-                         upper='circle')
-```
-
 So now, let us see if we can try to build a model to predict the mpg (miles per gallon) of a vehicle. (Results hidden in html.)
 ```{r model1}
 fit1 <- lm(mpg ~ wt, data = mtcars)

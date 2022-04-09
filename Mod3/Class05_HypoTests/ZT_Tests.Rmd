@@ -76,8 +76,8 @@ So let's say we want to test is the mean height is 72.1 inches like last year as
 loadPkg("BSDA") # for z.test
 ztest95_2tail = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31) # 
 ztest95_2tail
-ztest95_right = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative = "greater") #
-# ztest95_right
+ztest95_right = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative = "greater") # 
+ztest95_right
 # ztest99 = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, conf.level=0.99 )
 # ztest99
 # ztest50 = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, conf.level=0.50 )
@@ -99,7 +99,7 @@ ztestrighttail = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative
 ztestrighttail  # p-value is small, reject null, adopt alternative mu is greater than 73.2
 ztest99lefttail = z.test(x=mlbsample$height, mu=72.1, sigma.x = 2.31, alternative = 'less' )
 # ztest99lefttail  # p-value is large, fail to reject null, which is mu = 73.2 (or greater.)
-# unloadPkg("BSDA")
+unloadPkg("BSDA")
 ```
 
 ```{r results='markup'}
