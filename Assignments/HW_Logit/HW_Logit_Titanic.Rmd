@@ -50,15 +50,42 @@ The questions listed here are the basic guidelines, not the only goal, in this h
 
 **Import the dataset into R**  
 Import the dataset into R, and call it titanic_orig, and explore it little to get the overall picture of the dataset. Eventually we would like to see what affected survival in the tragedy.  
+```{r}
+titanic_orig <- read.csv('Titanic.csv', header=T,
+                         colClasses = c(sex='factor', embarked='factor', 
+                                        pclass='factor', survived='factor'),
+                         fill=T, strip.white=T,
+                         blank.lines.skip=T
+                         )
+xkabledplyhead(titanic_orig)
+```
 
 
 ### Question 2 
 **Age**  
 One of the main factors we will try is Age. How many missing values are there for the variable `age`? If not too many, we should just clean those up and subset those out.  
 
+There are about `r summary(titanic_orig$age)[['NA\'s']]` missing values in age. 
+```{r clean_subset}
+titanic.cleaned.age <- outlierKD2(titanic_orig, var=age, rm=T, histogram=F) # Since you said "clean"
+missing.age.bool <- is.na(titanic.cleaned.age$age)
+filter.bool <- as.logical(1 - missing.age.bool)
+titanic.cleaned.age <- titanic.cleaned.age[filter.bool,]
+```
+
 ### Question 3  
 **More clean up**  
 While we are cleaning up the data, if we were to use sibsp and parch in our analysis, even though they are legitimately ratio level variables, we might not expect doubling the number of siblings necessarily double the effects on survival. For this reason, we should change these two variables to factor levels. Also change the other ones that you find imported as the wrong data type.  
+
+Other variables such as `survived`, `pclass`, `sex`, `embarked` have already been converted into factor variables while importing the dataset. Hence, I will convert `sibsp` and `parch` here.  
+
+```{r}
+titanic.cleaned.sibparc <- titanic.cleaned.age
+titanic.cleaned.sibparc$sibsp <- as.factor(titanic.cleaned.sibparc$sibsp)
+titanic.cleaned.sibparc$parch <- as.factor(titanic.cleaned.sibparc$parch)
+# Since it appears that we are no longer involved in cleaning, I will assign a new var
+titanic.cleaned <- titanic.cleaned.sibparc
+```
 
 
 ## Pre-logistic Regression
@@ -66,23 +93,54 @@ While we are cleaning up the data, if we were to use sibsp and parch in our anal
 ### Question 4  
 **Survival and age**  
 Before using our newly learned technique with logistic regression, let’s go old school, and use some prior knowledge to try find an answer. Does the data support that `age` very much affects `survival`?
+```{r age.ttest, results='markup'}
+survived.age <- titanic.cleaned[titanic.cleaned$survived==1,]$age
+not.survived.age <- titanic.cleaned[titanic.cleaned$survived==0,]$age
 
+age_survival <- t.test(survived.age, not.survived.age)
+age_survival
+
+```
+
+A `t.test` shows the variable `age` does not appear to have any effect on variable `survived` as the `p.value` is `r age_survival$p.value`. In other words, we fail to reject the Null hypothesis $H_{0}$ as any difference in age between the two subgroups survived and not survived is mere random.  
 
 ### Question 5  
 **Survival and gender**  
 Similarly, does the data support `sex` has an effect on `survival`? 
+```{r sex.chisq, results='markup'}
+sex.survival.cont <- table(titanic.cleaned$survived, titanic.cleaned$sex)
+sex.survival <- chisq.test(sex.survival.cont)
+sex.survival
+```
 
+Since `sex` and `survived` are categorical variables, I performed a $\chi^2$ test that produced a `p.value` of `r sex.survival$p.value`, which confirms that being a man or a woman does have an influence on the survival.  
 
 ### Question 6   
 **Survival and pclass**  
 Another big question is, does the data support Ticket class `pclass` has an effect on `survival`? 
+```{r pclass.chisq, results='markup'}
+pclass.survival.cont <- table(titanic.cleaned$survived, titanic.cleaned$pclass)
+pclass.survival <- chisq.test(pclass.survival.cont)
+pclass.survival
+```
 
+It appears from the $\chi^2$ test that `pclass` does have an effect on the var `survived`. Perhaps first class passengers get privileged access to safety boats.  
 
 ## Logistic Regression
 
 ### Question 7   
 **Survival and age + pclass**  
 Now let us build a logit model with age+pclass as predictors, and analyze the results. Remember to do all the model evaluation steps. Is the model a good one?
+```{r base.model, results='markup'}
+
+model.base <- glm(survived~age+pclass, data=titanic.cleaned, family=binomial(link='logit'))
+model.base
+summary(model.base)
+x2 <- model.base$null.deviance - model.base$deviance
+df <- 2
+base.model.p.value <- pchisq(x2, df, lower.tail=F)
+
+```
 
 
 ### Question 8  
