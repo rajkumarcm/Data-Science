@@ -57,7 +57,7 @@ titanic_orig <- read.csv('Titanic.csv', header=T,
                          fill=T, strip.white=T,
                          blank.lines.skip=T
                          )
-xkabledplyhead(titanic_orig)
+rmarkdown::paged_table(titanic_orig)
 ```
 
 
@@ -71,6 +71,7 @@ titanic.cleaned.age <- outlierKD2(titanic_orig, var=age, rm=T, histogram=F) # Si
 missing.age.bool <- is.na(titanic.cleaned.age$age)
 filter.bool <- as.logical(1 - missing.age.bool)
 titanic.cleaned.age <- titanic.cleaned.age[filter.bool,]
+xkablesummary(titanic.cleaned.age)
 ```
 
 ### Question 3  
@@ -85,6 +86,7 @@ titanic.cleaned.sibparc$sibsp <- as.factor(titanic.cleaned.sibparc$sibsp)
 titanic.cleaned.sibparc$parch <- as.factor(titanic.cleaned.sibparc$parch)
 # Since it appears that we are no longer involved in cleaning, I will assign a new var
 titanic.cleaned <- titanic.cleaned.sibparc
+rmarkdown::paged_table(titanic.cleaned)
 ```
 
 
@@ -102,7 +104,7 @@ age_survival
 
 ```
 
-A `t.test` shows the variable `age` does not appear to have any effect on variable `survived` as the `p.value` is `r age_survival$p.value`. In other words, we fail to reject the Null hypothesis $H_{0}$ as any difference in age between the two subgroups survived and not survived is mere random.  
+A `t.test` shows the variable `age` does not appear to have any effect on variable `survived` as the `p.value` is `r round(age_survival$p.value, 4)`. In other words, we fail to reject the Null hypothesis $H_{0}$ as any difference in age between the two subgroups survived and not survived is mere random.  
 
 ### Question 5  
 **Survival and gender**  
@@ -113,7 +115,7 @@ sex.survival <- chisq.test(sex.survival.cont)
 sex.survival
 ```
 
-Since `sex` and `survived` are categorical variables, I performed a $\chi^2$ test that produced a `p.value` of `r sex.survival$p.value`, which confirms that being a man or a woman does have an influence on the survival.  
+Since `sex` and `survived` are categorical variables, I performed a $\chi^2$ test that produced a `p.value` of `r round(sex.survival$p.value, 4)`, which confirms that being a man or a woman does have an influence on the survival.  
 
 ### Question 6   
 **Survival and pclass**  
@@ -124,7 +126,7 @@ pclass.survival <- chisq.test(pclass.survival.cont)
 pclass.survival
 ```
 
-It appears from the $\chi^2$ test that `pclass` does have an effect on the var `survived`. Perhaps first class passengers get privileged access to safety boats.  
+It appears from the $\chi^2$ test that `pclass` does have an effect on the var `survived` as the `p.value` is `r round(pclass.survival$p.value, 4)`. Perhaps first class passengers get privileged access to safety boats.  
 
 ## Logistic Regression
 
@@ -142,32 +144,68 @@ base.model.p.value <- pchisq(x2, df, lower.tail=F)
 
 ```
 ```{r base.model.eval, results='markup'}
-
-base.pred <- predict.glm(model.base, newdata=titanic.cleaned, type='response')
-pred.list <- round(base.pred)
-cm <- matrix(0, nrow=2, ncol=2)
-survived <- as.numeric(titanic.cleaned$survived)
-for(i in 1:length(pred.list))
+get_cm <- function(predictions, model, co)
 {
-  actual <- survived[i]
-  pred <- pred.list[i]
-  cm[(pred+1), actual] <- cm[(pred+1), actual] + 1
+  # pred.list <- round(predictions) # for now
+  pred.list <- predictions
+  pred.list[predictions <= co] <- 1
+  pred.list[predictions > co] <- 2
+  cm <- matrix(0, nrow=2, ncol=2)
+  survived <- as.numeric(titanic.cleaned$survived)
+  for(i in 1:length(pred.list))
+  {
+    actual <- survived[i]
+    pred <- pred.list[i]
+    cm[pred, actual] <- cm[pred, actual] + 1
+  }
+return(cm)
 }
-precision <- cm[1, 1]/(cm[1, 1] + cm[1, 2])
-recall <- cm[1, 1]/(cm[1, 1] + cm[2, 1])
-sensitivity <- recall
-specificity <- cm[2, 2]/(cm[2, 2] + cm[1, 2])
-f1 <- 2 * ((precision * recall)/(precision + recall))
-colnames(cm) <- c('Act.Pos', 'Act.Neg')
-cm
+
+get_evalmetrics <- function(cm, model, n_preds)
+{
+  precision <- cm[1, 1]/(cm[1, 1] + cm[1, 2])
+  recall <- cm[1, 1]/(cm[1, 1] + cm[2, 1])
+  sensitivity <- recall
+  specificity <- cm[2, 2]/(cm[2, 2] + cm[1, 2])
+  f1 <- 2 * ((precision * recall)/(precision + recall))
+  colnames(cm) <- c('Act.Pos', 'Act.Neg')
+  mcfadden <- 1 - model$deviance/model$null.deviance
+  accuracy <- (cm[1, 1] + cm[2, 2])/n_preds
+  metrics <- c(precision, recall, sensitivity, specificity, f1, mcfadden, accuracy)
+  return(metrics)
+}
 ```
 
 
-Precision | Recall | Sensitivity | Specificity | F1
----- | ---- | ---- | ---- | ----
-`r precision` | `r recall` | `r sensitivity` | `r specificity` | `r f1`  
+```{r base.model.cm, results='markup'}
+base.pred <- predict.glm(model.base, newdata=titanic.cleaned, type='response')
+base.cm <- NULL
+co_threshs <- seq(0.3, 0.7, 0.05)
+model.base.metrics <- data.frame(matrix(0, nrow=length(co_threshs), ncol=8))
+colnames(model.base.metrics) <- c('Cutoff', 'Precision', 'Recall', 'Sensitivity', 'Specificity', 'F1', 'McFadden', 'Accuracy')
+idx = 1
+for(co in co_threshs)
+{
+  tmp.cm <- get_cm(base.pred, model.base, co)
+  if(co == 0.5)
+  {
+    base.cm <- tmp.cm
+  }
+  tmp.metrics <- get_evalmetrics(tmp.cm, model.base, length(base.pred))
+  tmp.metrics <- c(co, tmp.metrics)
+  model.base.metrics[idx,] <- tmp.metrics
+  idx <- idx + 1
+}
+rmarkdown::paged_table(model.base.metrics)
+colnames(base.cm) <- c('Actually Pos', 'Actually Neg')
+```
 
-Looking at the `Specificity` and the `F1` scores, I would not say it is a good model.
+**Confusion Matrix for cutoff 0.5**  
+```{r, results='markup'}
+base.cm
+```
+
+Looking at the `Specificity`, `McFadden` and the `F1` scores, I would not say it is a good model.  
 
 ```{r}
 library(pROC)
@@ -187,29 +225,32 @@ summary(model2)
 ```
 
 ```{r model2.eval, results='markup'}
-
 model2.pred <- predict.glm(model2, newdata=titanic.cleaned, type='response')
-pred.list <- round(model2.pred)
-cm <- matrix(0, nrow=2, ncol=2)
-survived <- as.numeric(titanic.cleaned$survived)
-for(i in 1:length(pred.list))
+model2.metrics <- data.frame(matrix(0, nrow=length(co_threshs), ncol=8))
+colnames(model2.metrics) <- c('Cutoff', 'Precision', 'Recall', 'Sensitivity', 'Specificity', 'F1', 'McFadden', 'Accuracy')
+idx = 1
+for(co in co_threshs)
 {
-  actual <- survived[i]
-  pred <- pred.list[i]
-  cm[(pred+1), actual] <- cm[(pred+1), actual] + 1
+  tmp.cm <- get_cm(model2.pred, model2, co)
+  if(co == 0.5)
+  {
+    model2.cm <- tmp.cm
+  }
+  tmp.metrics <- get_evalmetrics(tmp.cm, model2, length(model2.pred))
+  tmp.metrics <- c(co, tmp.metrics)
+  model2.metrics[idx,] <- tmp.metrics
+  idx <- idx + 1
 }
-precision <- cm[1, 1]/(cm[1, 1] + cm[1, 2])
-recall <- cm[1, 1]/(cm[1, 1] + cm[2, 1])
-sensitivity <- recall
-specificity <- cm[2, 2]/(cm[2, 2] + cm[1, 2])
-f1 <- 2 * ((precision * recall)/(precision + recall))
-colnames(cm) <- c('Act.Pos', 'Act.Neg')
-cm
+rmarkdown::paged_table(model2.metrics)
+colnames(model2.cm) <- c('Actually Pos', 'Actually Neg')
+
 ```
 
-Precision | Recall | Sensitivity | Specificity | F1
----- | ---- | ---- | ---- | ----
-`r precision` | `r recall` | `r sensitivity` | `r specificity` | `r f1`  
+**Confusion Matrix for cutoff 0.5**  
+```{r, results='markup'}
+model2.cm
+```
+
 
 ```{r}
 library(pROC)
@@ -218,7 +259,7 @@ h <- roc(survived~prob, data=tmp.titanic)
 plot(h)
 ```
 
-Compared to the previous models, almost all evaluation metrics including AIC have improved. Also the ROC curve appears good now. Hence, the model appears to be better than the previous model.  
+Compared to the previous models, almost all evaluation metrics including AIC have improved. Also the ROC curve appears good now. Hence, the model appears to be better than the previous model. P.S: Somehow I have always, in the past, been biased to look only at the F1 score compared to Accuracy, but carefully looking at the accuracy now it appears increasingly useful than F1. F1 might be a harmonic mean of precision and recall, but Accuracy gives an overall good balance between specificity and sensitivity. If you observe the values for the cutoff 0.65, the $F1$ score is $0.844$, and although has high sensitivity (recall of positive class), the specificity (the recall rate of negative class) is low. In my opinion, correctly predicting positive class carries the same priority as predicting negative class unless a preconceived bias from expert domain is involved. Under this case, an accuracy of $80.6\%$ for cutoff $0.45$ appears as a well balanced measure between Specificity and Sensitivity, after all that's the formula.  
 
 ### Question 9  
 **Sample Predictions**  
@@ -231,7 +272,7 @@ tmp.df$age <- as.numeric(tmp.df$age)
 sample.pred <- predict.glm(model2, newdata=tmp.df, type='response')
 ```
 
-For the first case when it is a 10 years old girl, who bought a second class ticket, her chances of surviving would be `r sample.pred[1]*100`$\%$ as per the previous model. Whereas in the case of 20 years old male, who bought a first class ticket, his chances of surviving would be `r sample.pred[2]*100`$\%$  
+For the first case when it is a 10 years old girl, who bought a second class ticket, her chances of surviving would be `r sample.pred[1]*100`$\%$ as per the previous model, whereas in the case of 20 years old male, who bought a first class ticket, his chances of surviving would be `r sample.pred[2]*100`$\%$  
 
 ## Interpretation  
 
@@ -239,3 +280,14 @@ For the first case when it is a 10 years old girl, who bought a second class tic
 *Summary*  
 With all the results you obtained above, how would you present a high-level summary of the findings? Are the results surprising or expected? You might need to dig a little deeper than just the numbers, the test results/p-values, and the model statistics. This is a question about who we are, … in the face of death. 
 
+My understanding from this finding, from a statistical perspective, would be that `sex` is apparently the influencing factor of `survival`. From the perspective you have portrayed, the reason I could think of would be being a girl often involves having more sympathy on someone being left behind compared to a man, who is regardless of his age, is expected to be more audacious and sail against the storm. In simple words, there is a gender bias.  
+
+```{r last.eval, include=F}
+tmp.df3 <- titanic.cleaned[1:2, c('sex', 'age', 'pclass')]
+tmp.df3[1,] <- c('male', 5, 1)
+tmp.df3[2,] <- c('female', 30, 2)
+tmp.df3$age <- as.numeric(tmp.df3$age)
+sample.pred3 <- predict.glm(model2, newdata=tmp.df3, type='response')
+```
+
+A boy, who is 5 years old and holds a first class ticket has a relatively low chance of `r sample.pred3[1]*100` $\%$ surviving compared to a woman, who is 30 years old and holds a second class ticket. The woman has about `r sample.pred3[2]*100` $\%$ of surviving. This clearly shows the gender bias I mentioned.  
