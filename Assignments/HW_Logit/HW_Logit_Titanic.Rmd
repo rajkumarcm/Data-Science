@@ -50,7 +50,7 @@ The questions listed here are the basic guidelines, not the only goal, in this h
 
 **Import the dataset into R**  
 Import the dataset into R, and call it titanic_orig, and explore it little to get the overall picture of the dataset. Eventually we would like to see what affected survival in the tragedy.  
-```{r}
+```{r, results='asis'}
 titanic_orig <- read.csv('Titanic.csv', header=T,
                          colClasses = c(sex='factor', embarked='factor', 
                                         pclass='factor', survived='factor'),
@@ -66,7 +66,7 @@ xkabledplyhead(titanic_orig)
 One of the main factors we will try is Age. How many missing values are there for the variable `age`? If not too many, we should just clean those up and subset those out.  
 
 There are about `r summary(titanic_orig$age)[['NA\'s']]` missing values in age. 
-```{r clean_subset}
+```{r clean_subset, results='asis'}
 titanic.cleaned.age <- outlierKD2(titanic_orig, var=age, rm=T, histogram=F) # Since you said "clean"
 missing.age.bool <- is.na(titanic.cleaned.age$age)
 filter.bool <- as.logical(1 - missing.age.bool)
@@ -79,7 +79,7 @@ While we are cleaning up the data, if we were to use sibsp and parch in our anal
 
 Other variables such as `survived`, `pclass`, `sex`, `embarked` have already been converted into factor variables while importing the dataset. Hence, I will convert `sibsp` and `parch` here.  
 
-```{r}
+```{r, results='asis'}
 titanic.cleaned.sibparc <- titanic.cleaned.age
 titanic.cleaned.sibparc$sibsp <- as.factor(titanic.cleaned.sibparc$sibsp)
 titanic.cleaned.sibparc$parch <- as.factor(titanic.cleaned.sibparc$parch)
@@ -141,16 +141,97 @@ df <- 2
 base.model.p.value <- pchisq(x2, df, lower.tail=F)
 
 ```
+```{r base.model.eval, results='markup'}
 
+base.pred <- predict.glm(model.base, newdata=titanic.cleaned, type='response')
+pred.list <- round(base.pred)
+cm <- matrix(0, nrow=2, ncol=2)
+survived <- as.numeric(titanic.cleaned$survived)
+for(i in 1:length(pred.list))
+{
+  actual <- survived[i]
+  pred <- pred.list[i]
+  cm[(pred+1), actual] <- cm[(pred+1), actual] + 1
+}
+precision <- cm[1, 1]/(cm[1, 1] + cm[1, 2])
+recall <- cm[1, 1]/(cm[1, 1] + cm[2, 1])
+sensitivity <- recall
+specificity <- cm[2, 2]/(cm[2, 2] + cm[1, 2])
+f1 <- 2 * ((precision * recall)/(precision + recall))
+colnames(cm) <- c('Act.Pos', 'Act.Neg')
+cm
+```
+
+
+Precision | Recall | Sensitivity | Specificity | F1
+---- | ---- | ---- | ---- | ----
+`r precision` | `r recall` | `r sensitivity` | `r specificity` | `r f1`  
+
+Looking at the `Specificity` and the `F1` scores, I would not say it is a good model.
+
+```{r}
+library(pROC)
+tmp.titanic <- titanic.cleaned
+tmp.titanic$prob <- base.pred
+h <- roc(survived~prob, data=tmp.titanic)
+plot(h)
+```
 
 ### Question 8  
 **More features**  
 Can we improve the model? Let us also throw in `sex` as a predictor. How’s the model now?
+```{r model2, results='markup'}
+model2 <- glm(survived~age+pclass+sex, data=titanic.cleaned, family=binomial(link='logit'))
+model2
+summary(model2)
+```
 
+```{r model2.eval, results='markup'}
+
+model2.pred <- predict.glm(model2, newdata=titanic.cleaned, type='response')
+pred.list <- round(model2.pred)
+cm <- matrix(0, nrow=2, ncol=2)
+survived <- as.numeric(titanic.cleaned$survived)
+for(i in 1:length(pred.list))
+{
+  actual <- survived[i]
+  pred <- pred.list[i]
+  cm[(pred+1), actual] <- cm[(pred+1), actual] + 1
+}
+precision <- cm[1, 1]/(cm[1, 1] + cm[1, 2])
+recall <- cm[1, 1]/(cm[1, 1] + cm[2, 1])
+sensitivity <- recall
+specificity <- cm[2, 2]/(cm[2, 2] + cm[1, 2])
+f1 <- 2 * ((precision * recall)/(precision + recall))
+colnames(cm) <- c('Act.Pos', 'Act.Neg')
+cm
+```
+
+Precision | Recall | Sensitivity | Specificity | F1
+---- | ---- | ---- | ---- | ----
+`r precision` | `r recall` | `r sensitivity` | `r specificity` | `r f1`  
+
+```{r}
+library(pROC)
+tmp.titanic$prob <- model2.pred
+h <- roc(survived~prob, data=tmp.titanic)
+plot(h)
+```
+
+Compared to the previous models, almost all evaluation metrics including AIC have improved. Also the ROC curve appears good now. Hence, the model appears to be better than the previous model.  
 
 ### Question 9  
 **Sample Predictions**  
 According to the last model, what is the chance of survival for a female, age 10, second class passenger? And a male, age 20, first class passenger?
+```{r}
+tmp.df <- titanic.cleaned[1:2, c('sex', 'age', 'pclass')]
+tmp.df[1,] <- c('female', 10, 2)
+tmp.df[2,] <- c('male', 20, 1)
+tmp.df$age <- as.numeric(tmp.df$age)
+sample.pred <- predict.glm(model2, newdata=tmp.df, type='response')
+```
+
+For the first case when it is a 10 years old girl, who bought a second class ticket, her chances of surviving would be `r sample.pred[1]*100`$\%$ as per the previous model. Whereas in the case of 20 years old male, who bought a first class ticket, his chances of surviving would be `r sample.pred[2]*100`$\%$  
 
 ## Interpretation  
 
