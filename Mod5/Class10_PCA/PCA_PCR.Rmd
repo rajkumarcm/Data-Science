@@ -370,7 +370,7 @@ Hit_RMSE
 pcr.fit1 <- pcr(Salary~. ,data=Hitters, subset=1:222,scale=TRUE,validation="CV")
 validationplot(pcr.fit1,val.type="MSEP")
 #We can also do R^2
-validationplot(pcr.fit1,val.type="R2")
+validationplot(pcr.fit1,val.type="RMSEP")
 summary(pcr.fit1)
 ```
 Let us also build out the model with PCs, and validate the VIFs. First, build the full model from the original `Hitters` dataframe:  

@@ -1,0 +1,7 @@
+The dataset was extracted and converted to tabular format 
+by data.world user @craigkelly [https://data.world/craigkelly/usda-national-nutrient-db]
+(linked from https://data.world/exercises/principal-components-exercise-1)
+
+USDANationalNutrient.csv
+
+
