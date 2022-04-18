@@ -1,0 +1,224 @@
+---
+title: "Ridge and Lasso Regression"
+author: "GWU Intro to Data Science DATS 6101"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r include=FALSE}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+# Preparation
+
+## Standardize the numerical variables
+
+When we perform Ridge or Lasso regression, as with most other cases, standardization of variables (z-scores is a typical choice) is very important.
+
+Here we use the function `ezids::uzsale(df, append=0, excl=NULL)` which will convert all numerical values to the respective z-scores. The base R library can do that too, but this new function is safe with categorical variable as well, and added some choice options.  
+
+# Ridge Regression
+
+This example here is based on the [Ridge Regression  lab](http://www.science.smith.edu/~jcrouser/SDS293/labs/lab10-r.html) and the Lasso in R from p. 251-255 of "Introduction to Statistical Learning with Applications in R" by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It was re-implemented in Fall 2016 in tidyverse format by Amelia McNamara and R. Jordan Crouser at Smith College.
+
+## The model
+Let us first load the dataset for baseball players, and remove the NA values for the Salary. Call that dataframe `HittersClean`.
+
+```{r}
+loadPkg("ISLR")
+HittersSm = Hitters[,c('AtBat','Hits','HmRun','Runs','RBI','Walks','Years','League','Division','PutOuts','Assists','Errors','Salary')] # removed columns with cumulative player stats
+HittersClean = subset(HittersSm, Salary != "NA") 
+HittersClean = uzscale(HittersClean, append=0, "Salary") # scaled, cleaned dataset for analysis
+```
+
+Next, we use the library and the function [glmet](https://cran.r-project.org/web/packages/glmnet/index.html) (developed for Lasso and Elastic-Net Regularized Generalized Linear Models) to build the ridge and lasso regresion models.
+
+```{r}
+x=model.matrix(Salary~.,HittersClean)[,-1]
+y=HittersClean$Salary
+
+loadPkg("glmnet")
+grid=10^seq(10,-2,length=100) # prepare log scale grid for λ values, from 10^10 to 10^-2, in 100 segments
+ridge.mod=glmnet(x,y,alpha=0,lambda=grid) # build the ridge model. (alpha is elastic-net mixing parameter, between 0 and 1. Ridge is 0, Lasso is 1)
+dim(coef(ridge.mod))  # same as dim(coefficients(ridge.mod)), is the dimensions of all the models (100 of them), and the dimension is here: 20x100
+plot(ridge.mod)    # Draw plot of coefficients
+```
+
+The `glmnet( )` function creates 100 models, with our choice of 100 $\lambda$ values. Each model coefficients are stored in the object we named: `ridge.mod`   
+There are 20 coefficients for each model. The 100 $\lambda$ values are chosen from 0.02 ($10^{-2}$) to $10^{10}$, essentially covering 
+the ordinary least square model ($\lambda$ = 0), and the null/constant model ($\lambda$ approach infinity).
+
+```{r}
+ridge.mod$lambda[50] # 11498
+coef(ridge.mod)[,50]
+sqrt(sum(coef(ridge.mod)[-1,50]^2)) # 18.4
+ridge.mod$lambda[60] # 705
+coef(ridge.mod)[,60] 
+sqrt(sum(coef(ridge.mod)[-1,60]^2))  # 119
+
+```
+
+
+Because the ridge regression uses the "L$^2$ norm", the coefficients are expected to be smaller when $\lambda$ is large. Our "mid-point" (the 50-th) of $\lambda$ equals to 11498, and the sum of squares of coefficients = `r round(sqrt(sum(coef(ridge.mod)[-1,50]^2)),digits=4)`. Compared to the 60-th value (we have a decreasing sequence) $\lambda$ of = 705, we find the sum of squares of the coefficients to be `r round(sqrt(sum(coef(ridge.mod)[-1,60]^2)),digits=4)`, about 6 times larger.
+
+The model although only has 100 different values of $\lambda$ recorded, we can use the predict function (in R basic stats library) for various purposes, such as getting the predicted coefficients for $\lambda$=50, for example.
+
+```{r, include=T}
+predict(ridge.mod,s=50,type="coefficients")[1:13,]
+```
+
+## Train and Test sets
+
+Let us split the data into training and test set, so that we can estimate test errors. The split will be used here for Ridge and later for Lasso regression. 
+
+```{r, warning=F}
+loadPkg("dplyr")
+set.seed(1)
+train = HittersClean %>% sample_frac(0.5)
+test = HittersClean %>% setdiff(train)
+
+x_train = model.matrix(Salary~., train)[,-1]
+x_test = model.matrix(Salary~., test)[,-1]
+
+y_train = train %>% select(Salary) %>% unlist() # %>% as.numeric()
+y_test = test %>% select(Salary) %>% unlist() # %>% as.numeric()
+
+```
+
+
+```{r}
+ridge.mod=glmnet(x_train,y_train,alpha=0,lambda=grid, thresh=1e-12)
+ridge.pred=predict(ridge.mod,s=4,newx=x_test)
+ridge.mse.test = mean((ridge.pred-y_test)^2)
+ridge.mse.test # 139903
+```
+
+```{r}
+null.mod = lm(Salary~1, data = train)
+summary(null.mod)
+# We will use this to find MSE on the test dataset
+null.mse.test = mean( (y_test - predict.lm(null.mod, test ) ) ^ 2)
+null.mse.test # 224692
+```
+
+The test set mean-squared-error MSE is `r format(ridge.mse.test, scientific=FALSE)` (remember that we are using standardized scores) for $\lambda = 4$. 
+On the other hand, for the null model ($\lambda$ approach infinity), the test MSE can be found to be `r format(null.mse.test, scientific=FALSE)`. So $\lambda = 4$ reduces the variance by `r format(null.mse.test - ridge.mse.test, scientific=FALSE)` at the expense of the bias.
+
+```{r}
+mean((mean(y_train)-y_test)^2) # the test set MSE
+```
+
+We could have also used a large $\lambda$ value to find the MSE for the null model. These two methods yield essentially the same answer of `r format(null.mse.test, scientific=FALSE)`.
+```{r}
+ridge.pred=predict(ridge.mod,s=1e10,newx=x_test)
+null2.mse.test = mean((ridge.pred-y_test)^2)
+null2.mse.test # also equals to 224692, like null.mse.test calculated before.
+```
+
+```{r}
+ridge.pred = predict(ridge.mod, s = 0, newx = x_test)
+ols2.mse.test = mean((ridge.pred - y_test)^2)
+predict(ridge.mod, s = 0, type="coefficients")[1:13,]
+```
+
+Now for the other extreme special case of small $\lambda$, which is the ordinary least square (OLS) model. We can first use the ridge regression result to predict the $\lambda$ =0 case. The MSE found to be `r format(ols2.mse.test, scientific=FALSE)` on the test dataset that way. 
+
+
+We can also build the OLS model directly, and calculate the MSE.
+
+```{r}
+ols.mod = lm(Salary~., data = train)
+summary(ols.mod)
+mean(residuals(ols.mod)^2) # 101516 for the train set
+ols.mse.test = mean( (y_test - predict.lm(ols.mod, test ) ) ^ 2)
+ols.mse.test # 139042  for the test set
+
+```
+
+
+## Use Cross-validation
+
+There is a built-in cross-validation method with glmnet, which will select the minimal $\lambda$ value. The value found here is 101516
+
+```{r}
+set.seed(1)
+cv.out.ridge=cv.glmnet(x_train,y_train,alpha=0)  # Fit ridge regression model on training data
+plot(cv.out.ridge)
+```
+
+```{r}
+bestlam.ridge = cv.out.ridge$lambda.min  # Select lamda that minimizes training MSE
+bestlam.ridge
+cat("lowest lamda from CV: ", bestlam.ridge, "\n\n")
+```
+
+From Cross-validation method, we found the lowest MSE to be when $\lambda$ appro = `r round(bestlam.ridge,digits=4)`.
+
+```{r}
+ridge.pred=predict(ridge.mod,s=bestlam.ridge,newx=x_test)
+ridgeMeanMse = mean((ridge.pred-y_test)^2)
+cat("Mean MSE for best Ridge lamda: ", ridgeMeanMse, "\n\n")
+#
+out.ridge=glmnet(x,y,alpha=0)
+ridge_coef = predict(out.ridge,type="coefficients",s=bestlam.ridge)[1:13,]
+cat("\nAll the coefficients : \n")
+ridge_coef
+```
+
+The first vertical dotted line is where the lowest MSE is. The second vertical dotted line is within one standard error. The labels of above the graph shows how many non-zero coefficients in the model.
+
+
+# The Lasso
+
+The same function glmnet( ) with alpha set to 1 will build the Lasso regression model. 
+
+```{r}
+lasso.mod=glmnet(x_train,y_train,alpha=1,lambda=grid)
+plot(lasso.mod)
+set.seed(1)
+cv.out.lasso=cv.glmnet(x_train,y_train,alpha=1)
+plot(cv.out.lasso)
+```
+
+
+```{r}
+bestlam.lasso=cv.out.lasso$lambda.min
+cat("lowest lamda from CV: ", bestlam.lasso, "\n\n")
+```
+
+Here, we see that the lowest MSE is when $\lambda$ appro = `r round(bestlam.lasso,digits=4)`. It has 6 non-zero coefficients. 
+
+
+```{r}
+lasso.pred=predict(lasso.mod,s=bestlam.lasso,newx=x_test)
+#
+out.lasso = glmnet(x, y, alpha = 1, lambda = grid) # Fit lasso model on full dataset
+lassoMeanMse = mean((lasso.pred-y_test)^2)
+cat("Mean MSE for best Lasso lamda: ", lassoMeanMse, "\n\n")
+#
+lasso_coef = predict(out.lasso, type = "coefficients", s = bestlam.lasso)[1:13,] # Display coefficients using λ chosen by CV
+cat("\nAll the coefficients : \n")
+lasso_coef
+cat("\nThe non-zero coefficients : \n")
+lasso_coef[lasso_coef!=0]
+```

@@ -1,0 +1,358 @@
+---
+title: "Classification and Regression Trees"
+author: "GWU Intro to Data Science DATS 6101"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r include=FALSE}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+ 
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+```{r}
+loadPkg("rpart") # Classification trees, rpart(formula, data=, method=,control=) 
+```
+
+# Categorical Tree
+
+## Kyphosis dataset   
+Reference: <https://www.statmethods.net/advstats/cart.html>
+
+Let us try this sample dataset kyphosis (an abnormal, convex curvature of the spine, with a resultant bulge at the upper back). The data frame has 81 rows and 4 columns, representing data on children who have had corrective spinal surgery. The four variables are  
+
+* kyphosis: a factor with levels absent present indicating if a kyphosis (a type of deformation) was present after the operation.  
+* Age: in months  
+* Number: the number of vertebrae involved  
+* Start: the number of the first (topmost) vertebra operated on.  
+
+## Grow the tree 
+
+```{r, echo = T, fig.dim=c(6,4)}
+set.seed(1)
+kyphosisfit <- rpart(Kyphosis ~ Age + Number + Start, data=kyphosis, method="class", control = list(maxdepth = 4) )
+# kyphosisfit <- rpart(Kyphosis ~ Age + Number + Start, data=kyphosis, method="class", control = {rpart.control list} )
+# rpart.control(maxdepth = 30, minsplit = 20, minbucket = round(minsplit/3), cp = 0.01, maxcompete = 4, maxsurrogate = 5, usesurrogate = 2, xval = 10, surrogatestyle = 0, ...)
+printcp(kyphosisfit) # display the results 
+plotcp(kyphosisfit) # visualize cross-validation results 
+summary(kyphosisfit) # detailed summary of splits
+
+# plot tree 
+plot(kyphosisfit, uniform=TRUE, main="Classification Tree for Kyphosis")
+text(kyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+
+
+
+
+```{r}
+# create attractive postcript plot of tree 
+post(kyphosisfit, file = "kythosisTree2.ps", title = "Classification Tree for Kythosis")
+```
+
+We can also create a simple but prettier plot for latter use. 
+
+So here are the results. 
+We see that at the first branching point, there are 64 absence, and 17 presence (with Kyphosis). The first split yields 19 outcomes with Start >= 8.5, and 62 with Start < 8.5. A further split on the right node might have been beneficial to separate the present and absent. The algorithm actually stops there, and predicts present for all 19 observations, giving 8/19 incorrect predictions. 
+
+Nonetheless, the lower branch continue to split, with 29 (100%) correct prediction and 12 (100%) on the first two leaves (nodes at end of branch)
+there, and 12/14 correct absence prediction on the third leaf, while the last leaf predicted 4/7 **present** correctly. Not too bad.
+
+Overall, when the model predicts **present**, accuracy is (11+4)/(8+11+3+4) = `r round( (11+4)/(8+11+3+4)*100,1 )`%. And when the model predicts **absent**, accuracy is (29+12+12)/(29+0+12+0+12+2) = `r round( (29+12+12)/(29+0+12+0+12+2)*100,1 )`%.
+
+We can also use some handy library to calculate these percentages in the confusion matrix.
+
+
+```{r, include=T}
+loadPkg("caret") 
+cm = confusionMatrix( predict(kyphosisfit, type = "class"), reference = kyphosis[, "Kyphosis"] )
+print('Overall: ')
+cm$overall
+print('Class: ')
+cm$byClass
+unloadPkg("caret")
+```
+
+The overall accuracy is `r round(cm$overall["Accuracy"]*100, digits=2)`%. These are the same metrics of sensitivity (also known as recall rate, TP / (TP+FN) ), specificity (TN / (TN+FP) ), F1 score, and others that we used in Logistic Regression and KNN analyses. Indeed, any "classifiers" can use the confustion matrix approach as one of the evaluation tools.  
+
+```{r, results="asis"}
+xkabledply(cm$table, "confusion matrix")
+```
+
+Let us try different different maxdepths, and collect the result summaries for display.
+
+```{r}
+loadPkg("rpart")
+loadPkg("caret")
+
+# kyphosisfit <- rpart(Kyphosis ~ Age + Number + Start, data=kyphosis, method="class", control = {rpart.control list} )
+# rpart.control(maxdepth = 30, minsplit = 20, minbucket = round(minsplit/3), cp = 0.01, maxcompete = 4, maxsurrogate = 5, usesurrogate = 2, xval = 10, surrogatestyle = 0, ...)
+
+# create an empty dataframe to store the results from confusion matrices
+confusionMatrixResultDf = data.frame( Depth=numeric(0), Accuracy= numeric(0), Sensitivity=numeric(0), Specificity=numeric(0), Pos.Pred.Value=numeric(0), Neg.Pred.Value=numeric(0), Precision=numeric(0), Recall=numeric(0), F1=numeric(0), Prevalence=numeric(0), Detection.Rate=numeric(0), Detection.Prevalence=numeric(0), Balanced.Accuracy=numeric(0), row.names = NULL )
+
+for (deep in 2:6) {
+  kfit <- rpart(Kyphosis ~ Age + Number + Start, data=kyphosis, method="class", control = list(maxdepth = deep) )
+  # 
+  cm = confusionMatrix( predict(kfit, type = "class"), reference = kyphosis[, "Kyphosis"] ) # from caret library
+  # 
+  cmaccu = cm$overall['Accuracy']
+  # print( paste("Total Accuracy = ", cmaccu ) )
+  # 
+  cmt = data.frame(Depth=deep, Accuracy = cmaccu, row.names = NULL ) # initialize a row of the metrics 
+  cmt = cbind( cmt, data.frame( t(cm$byClass) ) ) # the dataframe of the transpose, with k valued added in front
+  confusionMatrixResultDf = rbind(confusionMatrixResultDf, cmt)
+  # print("Other metrics : ")
+}
+
+unloadPkg("caret")
+```
+
+The summarized result is here:
+
+```{r, results="asis"}
+xkabledply(confusionMatrixResultDf, title="Kyphosis Classification Trees summary with varying MaxDepth")
+```
+
+Next, we can try two other ways to plot the tree, with library `rpart.plot` and a "fancy" plot using the library `rattle`.
+
+```{r fancyplot}
+loadPkg("rpart.plot")
+rpart.plot(kyphosisfit)
+loadPkg("rattle") # For fancyRpartPlot (Trees) Answer "no" on installing from binary source
+fancyRpartPlot(kyphosisfit)
+```
+
+
+## Prune the tree
+
+```{r prune}
+#prune the tree 
+pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[2,"CP"])
+#pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[which.min( kyphosisfit$cptable[,"xerror"] ),"CP"])
+
+# plot the pruned tree 
+fancyRpartPlot(pkyphosisfit)
+# For boring plot, use codes below instead
+plot(pkyphosisfit, uniform=TRUE, main="Pruned Classification Tree for Kyphosis")
+text(pkyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+
+## Iris dataset  
+
+Follow this example if interested: <https://stackoverflow.com/questions/47494113/rpart-regression-tree-interpretation>
+
+
+
+
+# Regression Tree
+
+Original source: <https://www2.stat.duke.edu/~rcs46/lectures_2017/08-trees/08-tree-regression.pdf>, by Rebecca C. Steorts, Duke University  
+(Other helpful resource: http://gsp.humboldt.edu/OLM/R/05_04_CART.html )   
+
+We are using the baseball players salary dataframe from library `ISLR` as demo. The `Salary` data, if we just look at that with say years or other numerical variables, it shows homoscedasticity issue. It is useful to use a log scale transform on Salary that way. Let us use `Years` and `Hits` to model `Salary`.  
+
+```{r}
+loadPkg("ISLR")
+loadPkg("tree") 
+attach(Hitters)
+# remove NA values
+Hitters <- na.omit(Hitters) 
+Salary <- na.omit(Salary)
+# put salary on log scale and fit reg. tree
+treefit <- tree(log(Salary) ~ Years + Hits, data=Hitters)
+summary(treefit)
+```
+
+The generic plot function will produce a tree graph, although not very nice looking.
+
+```{r}
+plot(treefit) 
+text(treefit,cex=0.75)
+```
+
+Note that the library `rpart` can also analyse regression tree. The result is mainly the same, and we already saw how it worked with other libraries such as `rattle` with `fancyRpartPlot`. You can compare the two. 
+
+Trees also give you a sense of **feature importance** in the results. The first split is considered on the most important feature/variable, and so forth.
+
+```{r}
+# treefitRpart <- rpart(log(Salary) ~ Years + Hits, data=Hitters) # only 7 terminal/leaf  nodes, c.f. 8 from the tree function above
+# treefitRpart <- rpart(log(Salary) ~ Years + Hits, data=Hitters, control = list(maxdepth = 8) ) # still only 7 terminal/leaf nodes. cp =0.01 is default (cost complexity)
+treefitRpart <- rpart(log(Salary) ~ Years + Hits, data=Hitters, control = list(maxdepth = 8, cp=0.009) ) # 8 terminal/leaf nodes, but slightly different than the nodes from the tree function above. 
+#treefit <- tree(log(Salary) ~ Years + Hits, data=Hitters)
+summary(treefitRpart)
+# summary(treefit)
+```
+
+```{r}
+fancyRpartPlot(treefitRpart)
+# For boring plot, use codes below instead
+plot(treefitRpart) 
+text(treefitRpart,cex=1) # cex control font size
+plot(treefit) 
+text(treefit,cex=0.75)
+```
+
+The two methods using `tree` and `rpart` resulted in slightly different trees. We can try different settings and adjust. I tried these:   
+
+~~~~
+treefitRpart <- rpart(log(Salary) ~ Years+Hits, data=Hitters)  
+# only 7 terminal/leaf  nodes, c.f. 8 from the tree function above  
+
+treefitRpart <- rpart(log(Salary) ~ Years+Hits, data=Hitters, control=list(maxdepth=8) )   
+# still only 7 terminal/leaf nodes. cp =0.01 is default (cost complexity)  
+ 
+treefitRpart <- rpart(log(Salary) ~ Years+Hits, data=Hitters, control=list(maxdepth=8, cp=0.009) )   
+# 8 terminal/leaf nodes, but but slightly different than the nodes from the tree function above.  
+~~~~
+
+Despite of the differences, let us simply stick with the `tree` library and follow the original author's example here.  
+
+We can "prune" the tree to reduce variance. A plot can be made after prunning, showing the effects in terms of deviance or other statistics. There are other optional parameters to use for prunning. Let us look at the simplest case.
+
+
+```{r}
+my.tree = tree(Salary  ~ Years + Hits, data=Hitters) # Fits tree 
+prune.tree(my.tree,best=5) # Returns best pruned tree 
+prune.tree(my.tree,best=5, newdata=Hitters)  # no test data set, so use training data
+my.tree.seq = prune.tree(my.tree) # Sequence of pruned 
+# tree sizes/errors
+plot(my.tree.seq) # Plots error/deviance vs size of tree (# of terminal nodes being used.)
+my.tree.seq$dev # Vector of error
+# rates for prunings, in order
+opt.trees = which(my.tree.seq$dev == min(my.tree.seq$dev)) 
+# Positions of
+# optimal (with respect to error) trees 
+min(my.tree.seq$size[opt.trees])
+# Size of smallest optimal tree
+```
+
+The graph shows the result with different number of terminal/leaf nodes on the x (tree size), and the deviance value of the model on the y. The scale on the top tells us what is the improvement of the deviance with each increase of the leaf size. We will continue the discussion of this with the next deviance vs size chart.
+
+
+
+```{r, results="markup"}
+fold <- floor(runif(nrow(Hitters),1,11)) 
+  Hitters$fold <- fold
+## the test set is just the first fold 
+test.set <- Hitters[Hitters$fold == 1,] 
+##exclude the first fold from the data here 
+train.set <- Hitters[Hitters$fold != 1,] 
+my.tree <- tree(log(Salary) ~ Years + Hits,data=train.set, mindev=0.001)
+# Return best pruned tree with 5 leaves, 
+# evaluating error on training data 
+prune.tree(my.tree, best=5)
+```
+
+We can, and should, evaluate the model on the test set.
+
+```{r}
+# Ditto, but evaluates on test.set
+prune.tree(my.tree,best=5,newdata=test.set)
+```
+
+A similar deviance vs tree size chart is shown here. 
+
+```{r}
+# Sequence of pruned tree sizes/errors
+my.tree.seq = prune.tree(my.tree) 
+plot(my.tree.seq) # error versus plot size
+# Vector of error rates 
+# for prunings, in order 
+deviance1 <- my.tree.seq$dev
+deviance1
+```
+
+## Deviance (Regression Trees)
+
+With number of terminal nodes increased from 1 to 2, the deviance decreased by 81 (see number on top of chart), and the deviance decreased by 0.25 with increasing size from 26 to 27. Our test set only has `r length(test.set$Salary)` rows/observations (and `r length(test.set)` columns/variables, although we are only using 2 variables for the tree model). The degree of freedom is `r length(test.set$Salary)` - 1 = `r (length(test.set$Salary)-1)`.   
+
+
+```{r}
+pchisq( deviance1[ length(deviance1) ], length(test.set$Salary)-1 , lower.tail = F )
+pchisq( deviance1[ length(deviance1)-6 ], length(test.set$Salary)-7 , lower.tail = F )
+```  
+The **null deviance** (= `r round(deviance1[23],digits=1)`) for the null model (with one one terminal/leaf node) will have `r (length(test.set$Salary)-1)` degree of freedom (df). Typically, there are two typical questions we can ask.  
+
+1. For a particular model, does the deviance show that data support the model as a good fit?  
+To this end, we can calculate the p-value from chisq distribution, with the null hypothesis stating the error terms are statistically zero, or the model and the actual data are statistically similar.  
+
+~~~  
+# For the null model with only one leaf node,  
+# df = `r length(test.set$Salary)`-1  
+pchisq( devNullModel, df=`r length(test.set$Salary)-1` , lower.tail = F ) # area of the right tail  
+# = `r pchisq( deviance1[ length(deviance1) ], length(test.set$Salary)-1 , lower.tail = F )`  
+# extremely small p, reject null, 
+# the (null) model does not look like actual data.  
+#  
+#  
+# For the model with 7 leaf nodes,  
+# df = `r length(test.set$Salary)-7`  
+pchisq( dev7model, `r length(test.set$Salary)-7` , lower.tail = F )   
+# = `r pchisq( deviance1[ length(deviance1)-6 ], length(test.set$Salary)-7 , lower.tail = F )`  
+# still very small p, reject null, 
+# this model still does not quite look like actual data.  
+#  
+~~~  
+
+We can use the deviance info this way for other models too, such as logistic regression, for example.  
+
+2. If we ask, decrease df by one with an extra leaf nodes, how much the deviance improved? Is it significant?  
+Say we first find the deviances for the 6-leaf and 8-leaf models. The way deviance is defined, they are on log scales. So the difference between the two deviances is related to the ratio of log-likelihood of the two models. We can therefore calculate the p-value of the difference using chisq again, with df = 2 this time, representing the change in df between the 6-leaf and the 8-leaf models.    
+
+~~~  
+pchisq( dev6model - dev8model , df=2 , lower.tail = F ) 
+# = `r pchisq( deviance1[ length(deviance1)-5 ] - deviance1[ length(deviance1)-7 ] , df=2 , lower.tail = F ) `
+# It is greater than 0.05, so we conclude the two models 
+# are not significantly different based on the test data set. 
+#
+~~~  
+
+Now, let's try between 2-node, 3-node, and the 4-node models:
+
+~~~  
+# 3-leaf and 4-leaf model difference, 
+pchisq( dev3model - dev4model , df=1 , lower.tail = F ) 
+# = `r pchisq( deviance1[ length(deviance1)-2 ] - deviance1[ length(deviance1)-3 ] , df=1 , lower.tail = F ) `
+# It is less than 0.05!!  The 4-node model improved much from the 
+# 3-leaf and is considered a better model (supported by the test set). 
+#
+# 4-leaf and 5-leaf model difference, 
+pchisq( dev4model - dev5model , df=1 , lower.tail = F ) 
+# = `r pchisq( deviance1[ length(deviance1)-3 ] - deviance1[ length(deviance1)-4 ] , df=1 , lower.tail = F )  `
+# It is just over than 0.05, border line case. Maybe we can 
+# include this 5-node model and be content (from this test set). 
+#
+~~~  
+
+```{r}
+unloadPkg("rattle") 
+unloadPkg("rpart.plot")
+unloadPkg("ISLR")
+unloadPkg("tree") 
+```
+
+
+
