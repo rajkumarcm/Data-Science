@@ -1,0 +1,396 @@
+---
+title: "PCA and PCR"
+author: "GWU Intro to Data Science DATS 6101"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r include=FALSE}
+# The package "ezids" (EZ Intro to Data Science) includes a lot of the helper functions we developed for the course. 
+# Some of the frequently used functions are loadPkg(), xkabledply(), xkablesummary(), uzscale(), etc.
+library(ezids)
+ 
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+# PCA
+
+## Centered and Scaled?
+
+Notice that when we use the function prcomp( ) in the stats library (and all the derived ones in other libraries based on this prcomp function), the default settings have center=TRUE and scale=FALSE. 
+
+A lot of times, when the different predictors ($x-$variables) have very different scales, it is best to standardize them so that the variances are not dominated by the one with the highest numerical values. However regardless of scaling them or not, it is preferred most of the time to have the data centered (for the $x-$vars). If we do not center it, then the first PC1 component will be heavily pulled by the location of the centroid in order to have a "balanced" coordinate axis. This is counterproductive to the goal of making PC1 with the most variance. So center=TRUE will almost always be our choice in PCA/PCR.
+
+## Example: USArrests
+
+Now, let us start by standardizing the numerical data. We've seen how to do this many times using the scale function. The actual PC-decomposition itself can be done without the explicit scaling, as we can simply use the option of "scale = TRUE" in prcomp( ) to obtain the result from the scaled values directly. Let us see how that works.  
+
+
+
+```{r results='markup'}
+# This example is from the Intro to Statistical Learning Lab which uses USArrets data. 
+#Below creates a character vector from the first column in the data.frame
+# states <- row.names(USArrests)
+#We now want to glance at our data, to try to understand the differences between the variables 
+USArrestsCentroid <- apply(USArrests , 2, mean)
+xkabledply( as.table(USArrestsCentroid), wide = TRUE, title = "Centroid for USArrests" )
+#We can see that that the average between the variables is quite high 
+USArrestsSds <- apply(USArrests , 2, var)
+xkabledply( as.table(USArrestsSds), wide = TRUE, title = "Std devs for USArrests" )
+xkablesummary(USArrests, title = "Five number summaries for USArrests")
+```
+
+For the raw, unscaled data, the correlation and covariance matrices are :  
+```{r results='markup'}
+#Find the correlation matrix
+xkabledply( cor(USArrests), title = "correlation matrix for USArrests" )
+#And the covariance matrix
+xkabledply( cov(USArrests), title = "covariance matrix for USArrests" )
+```
+
+For the z-score unscaled version, the correlation and covariance matrices are :  
+```{r results='markup'}
+#compare to the matrices after standardization
+USArrestscale = data.frame(scale(USArrests))
+xkabledply( cor(USArrestscale), title = "correlation matrix for USArrestscale" )
+xkabledply( cov(USArrestscale), title = "covariance matrix for USArrestscale"  )
+```
+
+
+First, we see that the four variables have quite different mean/sd. So most likely, it will be best to standardize them. 
+
+We also see a few facts about the correlation matrix and the covariance matrix. They are always symmtric matrices, and if we first standardize the variables, then the two are the same. In fact, the correlation matrix is not changed under any scaling. In that sense, the correlation matrix is a better measure of, well, correlations. 
+
+For PCA, finding the components can be done directly with prcomp( ), and chose to standardize the variables there. Let us look at the results, and see that component coefficients. Notice that all these components are given in "unit vector" form, although it still has an arbitrary sign factor overall.
+
+```{r}
+pr.out =prcomp(USArrests , scale =TRUE) # center=TRUE is the default
+pr.out.ns =prcomp(USArrests , scale =FALSE) # this is centered, un-normalized data, just for comparison.
+pr.out.nsnc =prcomp(USArrests , scale =FALSE, center = FALSE) # this is neither centered nor scaled.
+#Here are the "loading" vector for the PCA components 
+print("Case: z-score/scaled")
+summary(pr.out)
+pr.out$rotation
+print("Case: not scaled")
+summary(pr.out.ns)
+pr.out.ns$rotation
+print("Case: not scaled nor centered")
+summary(pr.out.nsnc)
+pr.out.nsnc$rotation
+```
+
+The last one is heavily skewed by the *Centroid*.  
+```{r}
+print("USArrestsCentroid:")
+USArrestsCentroid
+print("Normalized USArrestsCentroid:")
+USArrestsCentroid / sqrt(sum(USArrestsCentroid^2))
+```
+
+These rotational coefficients essentially serve as plot points for the how the data are loaded during the PCA calculation/rotations. 
+We can see this by plotting the first two outputs PC1 and PC2.
+
+## Plots
+
+In the biplots, first of all, it shows the data points for the 50 states now plotted (projection) onto the PC1-PC2 plane, with the scales on the bottom and the left tick marks. It also shows the original four components (Murder, Assault, Rape, and UrbanPop) on this PC1-PC2 plane, with the scales on the top and right tick marks showing the loadings. For example, the rotational loadings for Murder is `r format(pr.out$rotation[1,1])` PC1 + `r format(pr.out$rotation[1,2])` PC2 + ... which is shown on the biplot below.
+
+```{r, results='show'}
+##### 
+# biplot(pr.out.ns, scale = 1)
+biplot(pr.out, scale = 0) # scale = 1 is the default, which will scale the loadings by 10^1, and the PC component values by 10^-1.
+```
+
+Let us use the rotational coefficients to get the actual PC1-PC8 values and transform the dataset. We can do it by hand like the codes below. There are other ways to apply the rotational matrix to obtain the cor-matrix and the cov-matrix in the new components.
+
+```{r scaled_rotated, eval=F}
+# USArrests.z.pc = USArrests.z
+# USArrests.z.pc$PC1 = pr.out$rotation[1,1]*USArrests.z$Murder + pr.out$rotation[2,1]*USArrests.z$Assault + pr.out$rotation[3,1]*USArrests.z$UrbanPop + pr.out$rotation[4,1]*USArrests.z$Rape
+# USArrests.z.pc$PC2 = pr.out$rotation[1,2]*USArrests.z$Murder + pr.out$rotation[2,2]*USArrests.z$Assault + pr.out$rotation[3,2]*USArrests.z$UrbanPop + pr.out$rotation[4,2]*USArrests.z$Rape
+# USArrests.z.pc$PC3 = pr.out$rotation[1,3]*USArrests.z$Murder + pr.out$rotation[2,3]*USArrests.z$Assault + pr.out$rotation[3,3]*USArrests.z$UrbanPop + pr.out$rotation[4,3]*USArrests.z$Rape
+# USArrests.z.pc$PC4 = pr.out$rotation[1,4]*USArrests.z$Murder + pr.out$rotation[2,4]*USArrests.z$Assault + pr.out$rotation[3,4]*USArrests.z$UrbanPop + pr.out$rotation[4,4]*USArrests.z$Rape
+# USArrests.z.pc$Murder = NULL
+# USArrests.z.pc$Assault = NULL
+# USArrests.z.pc$UrbanPop = NULL
+# USArrests.z.pc$Rape = NULL
+# summary(USArrests.z.pc)
+# cor(USArrests.z.pc)
+# cov(USArrests.z.pc)
+```
+
+To make it easier in the future, I have created a couple of functions to perform such rotations for any dataframe.
+For example, the new coordinate values of the same dataset, but in the new PC axes, is given here by the `ezids::PCAxform()` function. We will try it for both the z-score version, and non-scaled. We will calculate the cor-matrix and the cov-matrix in the new coordinates. 
+
+```{r pcaxform_results1}
+USArrests.pc = PCAxform(USArrests,FALSE)
+print("Case: not scaled")
+summary(USArrests.pc)
+cov(USArrests.pc)
+cor(USArrests.pc)
+```
+
+```{r pcaxform_results2}
+USArrests.z.pc = PCAxform(USArrests,TRUE)
+print("Case: z-score/scaled")
+xkablesummary(USArrests.z.pc)
+cov(USArrests.z.pc)
+cor(USArrests.z.pc)
+
+```
+
+
+```{r}
+#Let us plot the cumulation of variance using the sd
+pr.var <- (pr.out$sdev^2)
+pve <- pr.var/sum(pr.var)
+plot(cumsum(pve), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+pr.var.nc <- (pr.out.ns$sdev^2)
+pve.nc <- pr.var.nc/sum(pr.var.nc)
+plot(cumsum(pve.nc), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+
+So we know 3 compenonts of the standardized analysis compose 95% of the variance so now let's look at the graph again using the comparison of PC2 and PC3, as well as between PC3 and PC4.
+
+```{r}
+biplot(pr.out,2:3, scale =0)
+biplot(pr.out.ns,2:3, scale =0)
+biplot(pr.out,3:4, scale =0)
+biplot(pr.out.ns,3:4, scale =0)
+```
+
+We can see that each pair shows the previous component carries more variation in the scattered plot than the next component. It is more drastic in the non-standardized case.
+
+## Example: mtcars
+Now let us try another example using mtcars.
+
+```{r mtcars_0, include=F}
+summary(mtcars)
+cor(mtcars)
+#And the covariance matrix
+cov(mtcars)
+#compare to the matrices after standardization
+mtcarsscale = data.frame(scale(mtcars))
+cor(mtcarsscale)
+cor(mtcarsscale)
+```
+
+Everything as expected. Of course we can use those graphical corrplot functions to visualize the cor matrix as well. Next, get the principal components:
+
+```{r}
+pr.cars =prcomp(mtcars , scale =TRUE)
+pr.cars.nc =prcomp(mtcars , scale =FALSE) # this is the non-centered, un-normalized data, just for comparison.
+#Here are the "loading" vector for the PCA components 
+summary(pr.cars)
+pr.cars$rotation
+summary(pr.cars.nc)
+pr.cars.nc$rotation
+```
+
+And look at the plots:
+
+```{r}
+pr.cars.var <- (pr.cars$sdev^2)
+pve.cars <- pr.cars.var/sum(pr.cars.var)
+plot(cumsum(pve.cars), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+pr.cars.nc.var <- (pr.cars.nc$sdev^2)
+pve.cars.nc  <- pr.cars.nc.var/sum(pr.cars.nc.var)
+plot(cumsum(pve.cars.nc), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+
+biplot(pr.cars, scale =0)
+biplot(pr.cars.nc, scale =0)
+biplot(pr.cars,2:3, scale =0)
+biplot(pr.cars.nc,2:3, scale =0)
+biplot(pr.cars,3:4, scale =0)
+biplot(pr.cars.nc,3:4, scale =0)
+```
+
+The general features that we observed from the USArrests example are all here. Sometimes, you can also find some groupings, say for PC1, there might be two distinct types on two ends, which could corresponds to gas-guzzlers and fuel-savers, for example.
+
+# PCR
+```{r}
+#We can also use ggplot to vis the output
+# install.packages("devtools")
+# loadPkg("devtools")
+# install_github("ggbiplot", "vqv")
+# loadPkg("ggbiplot")
+# g <- ggbiplot(pr.out,2:3, obs.scale = 1, var.scale = 1, ellipse = TRUE,circle = TRUE)
+# print(g)
+```
+
+## Build PCR models with "pls" library
+We can also use PCA more directly for regression, that is PCR, using the PLS Package
+
+```{r, results='markup'}
+loadPkg("pls")
+loadPkg("mice")
+loadPkg("ISLR")
+#Again we want to scale our data and "CV" stands for cross validation, which is defaulted to RMSE, using Hitters Data Set in the ISLR package 
+Hitters2 <- Hitters[,c("Salary","AtBat","Hits","HmRun","Runs","RBI","Walks","Assists","Errors")]
+pcr.fit=pcr(Salary~.,data=Hitters2,scale=TRUE,validation ="CV")
+xkabledplyhead(Hitters2)
+summary(pcr.fit)
+# xkabledply(pcr.fit) # doesn't work for this special pcr model object!
+```
+
+
+The `pcr()` resulting object stores a lot of info, includes the different predicted values in models with '1 comps', '2 comps', and so forth. Inspecting the pcr.fit object reveals that pcr.fit$coefficients and pcr.fit$fitted.values are [8x1x8] and [263x1x8] arrays. If we want to use only 1, or 3 components to build the linear models, the results can be found from here:
+
+```{r, results='show', include=T}
+pcr.fit$coefficients[1:8,1,'1 comps'] # only one coefficient for PC1, but expressed in the original variables coefficients.
+pcr.fit$coefficients[1:8,1,'3 comps'] # three coefficients for PC1, PC2, and PC3, but expressed in the original variables coefficients.
+# 
+pcr.fit$fitted.values[1:5,1,'1 comps'] # the fitted values. Showing only the first five here.
+pcr.fit$fitted.values[1:5,1,'3 comps']
+```
+
+One nice feature with PCR is that the variables decomposed this way are all linear independent. All VIF values should be 1. We cannot obtain the VIF values from the pcr.fit object directly, however. In order to get those, let us first obtain the data values for the components. We'll show you three different ways to obtain the components.
+
+## Transforming components
+
+### Getting the transformed values - Method 1
+
+This is using the coefficients from the prcomp object to perform the rotations in matrix multiplication. We are extracting the coefficients here individually, and write out the expressions in full for illustration. There are ways to use "vectorized" operations to combine these with some appropriate libraries. But eventually, methods 2 and 3 should work just fine as well.
+
+```{r VIF_check, results='markup'}
+Hitters2scaled <- data.frame(scale(Hitters2)) 
+Hitters2scaled.pc <- PCAxform( Hitters2[,2:9], z=TRUE ) # exclude salary column at index 1
+Hitters2scaled.pc$Salary = Hitters2[,1] # copy back the salary as y-target
+
+cor(Hitters2scaled.pc)
+cov(Hitters2scaled.pc)
+loadPkg("faraway")
+# Using PC
+vif.pc = lm(Salary~., data=Hitters2scaled.pc)
+vif(vif.pc)
+xkablevif(vif.pc, title = "VIFs for model using PCA")
+xkabledply(vif.pc, title = "Model summary for model using PCA")
+
+# Using original, scaled df
+vif.lms = lm(Salary~., data=Hitters2scaled)
+# vif(vif.lms)
+xkablevif(vif.lms, title = "VIFs for model using original scaled data")
+xkabledply(vif.lms, title = "Model summary with original scaled data")
+
+
+xkabledplyhead(Hitters2scaled.pc, title = "data frame in new PC basis")
+# print('--------------------------------This is vif.lm-------------------------')
+# str(vif.lm)
+# print('--------------------------------This is pcr.fit-------------------------')
+# str(pcr.fit)
+```
+
+### Method 2
+
+A second method is by using the generic predict function, together with the prcomp coefficients, 
+
+```{r}
+vars = setdiff(colnames(Hitters2scaled), "Salary")
+
+train <- as.matrix(Hitters2scaled[,vars])
+princ <- prcomp(train,center = TRUE,scale. = TRUE) 
+
+Hitters2scaled.pc.v2 <- as.data.frame(predict(princ,train), stringsAsFactors = FALSE)
+Hitters2scaled.pc.v2$Salary <- Hitters2scaled$Salary # append back the y-column
+
+head(Hitters2scaled.pc.v2)
+```
+
+### Method 3
+
+Or just use the defined function PCRxform, we have 
+
+```{r}
+Hitters2scaled.pc.v3 = PCRxform(Hitters2scaled,"Salary",TRUE) 
+head(Hitters2scaled.pc.v3)
+```
+
+With these tools, one can build models with y ~ PC1 + PC2 etc. 
+
+
+## Validation
+
+We can check and see where are mean square error prediction is the lowest:
+```{r}
+validationplot(pcr.fit ,val.type="MSEP",legend="topright")
+```
+
+We can also choose to use Cross-validation (CV) method.
+```{r}
+#coef(pcr.fit, ncomp = 8, intercept = TRUE)
+#compnames(pcr.fit, explvar = TRUE)
+#Have to create training data
+str(Hitters)
+trainhitters <- Hitters[1:222, ]
+y_test <- Hitters[223:322, 2] 
+testhitters <- Hitters[223:322,-2]
+pcr.fit <- pcr(Hits~. ,data=trainhitters,scale=TRUE,validation="CV")
+validationplot(pcr.fit,val.type="MSEP")
+```
+
+We can also use $R^2$ (a.k.a. coefficient of multiple determination)
+
+```{r}
+# validationplot(pcr.fit,val.type="R2")
+validationplot(pcr.fit, val.type="RMSEP")
+
+summary(pcr.fit)
+pcr_pred <- predict(pcr.fit, testhitters, ncomp = 9)
+df_predict <- data.frame(pcr_pred,y_test)
+```
+
+```{r}
+#We see that we've got some missing data so we will conduct some imputation prior to constructing the MSE
+df_predict1 <- mice(df_predict,m=5,maxit = 50, method = "pmm")
+# MICE - Multivariate Imputation by Chained Equations 
+# pmm method is "predictive mean matching"
+#Mice package provides a useful tool for conducting imputation methods, we will use the predictive mean method to replace the missing values
+df_predict <- complete(df_predict1,1)
+#The complete function in the mice package pushes the imputate values back into our dataset
+summary(df_predict)
+Hit_MSE <- mean((df_predict$Hits.9.comps-df_predict$Hitters.223.322..2.)^2)
+Hit_RMSE <- sqrt(Hit_MSE)
+Hit_RMSE
+#We can also use the subset argument inside the function 
+pcr.fit1 <- pcr(Salary~. ,data=Hitters, subset=1:222,scale=TRUE,validation="CV")
+validationplot(pcr.fit1,val.type="MSEP")
+#We can also do R^2
+validationplot(pcr.fit1,val.type="RMSEP")
+summary(pcr.fit1)
+```
+Let us also build out the model with PCs, and validate the VIFs. First, build the full model from the original `Hitters` dataframe:  
+```{r, results='markup'}
+fit_orig <- lm(Salary~., data = Hitters2)
+xkabledply(fit_orig, title = "Full Model for original dataframe")
+print(paste("R^2 : ", round( summary(fit_orig)$r.squared , digits = 5) ) )
+xkablevif(fit_orig)
+```
+Next, build the model using PCs:  
+```{r results='markup'}
+fit_pc <- lm(Salary~., data = Hitters2scaled.pc)
+xkabledply(fit_pc, title = "Full model using Principal Comps")
+print(paste("R^2 : ", round( summary(fit_pc)$r.squared , digits = 5) ) )
+xkablevif(fit_pc)
+```
+Lastly, let us build the model using only some PCs:  
+```{r results='markup'}
+fit_pcn <- lm(Salary~PC1+PC8, data = Hitters2scaled.pc)
+xkabledply(fit_pcn, title = "Full model using Principal Comps")
+print(paste("R^2 : ", round( summary(fit_pcn)$r.squared , digits = 5) ) )
+xkablevif(fit_pcn)
+```

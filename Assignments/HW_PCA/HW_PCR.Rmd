@@ -1,0 +1,103 @@
+---
+title: "Intro to DS - PCA / PCR"
+author: ""
+date: "today"
+# date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r init, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+library(ezids)
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+
+# USDA Nutrient Dataset  
+This data was from USDA National Nutrient dataset, pre-processed by @craigkelly from data.world. 
+
+## Preparation  
+
+### Question 1  
+**Import the dataset**  
+Import the dataset into R. There should be 45 variables. Take a quick look at the data. Just str, head, and tail will do for now.  
+
+
+### Question 2  
+**Drop the first 7 variables**  
+Save the rest as a dataframe, and call it `nndf1`.   
+
+## OLS full model  
+
+### Question 3  
+**Issue with full OLS models**  
+All the variables are now numerical. Let us build a quick model (full model) to predict `Energy_kcal`, and another full model to predict `VitB12_mcg`. (No fancy output is required.) Vegetarian diet can often be low on B12, which makes one get tired easier. Having a model could be useful. What are the NAs for the coefficients mean? (Try google.) 
+
+### Question 4  
+**Fix duplicate/collinear variables**  
+You probably realize where the problem comes from. Alright then, let us  
+
+* only keep the first 23 columns, 
+* standardize all the variables, and 
+* the save the resulting dataframe as `nndf`  
+
+Obtain a simple correlation matrix for the dataframe. If you use the function `xkabledply()` on the correlation matrix, it will print out a nice scrollable table for html and your console output.  
+
+
+### Question 5  
+**VitB12_mcg**  
+Build a quick full model again for “VitB12_mcg”. What is the $R^2$ value? Notice that using PCA won’t improve the $R^2$. It will only match it if you use all 22 PC-components (1 target, 22 explanatory variables). However, this can be the baseline number to compare.  
+
+## PCA  
+
+### Question 6   
+**PCA decomposition**  
+Instead of PCR, let us run the PCA on this dataset. The dataframe is already centered and scaled. Use  
+`nnpcomp <- prcomp(nndf)` to get the 23 PC-components. For `PC1`, which are the four strongest components it consists of?  
+(Ans: Riboflavin_mg at -0.3413, Niacin_mg at -0.3378, and so forth.)  
+And which are the four strongest for `PC2`?   
+
+### Question 7  
+**BiPlots**  
+Make a biplot between `PC1` and `PC2` like this: `biplot( nnpcomp, c(1,2), scale=0 )`. Continue to plot `PC1` with `PC3` (use `c(1,3)`), `c(1,4)`, `c(1,5)`, and `c(1,6)`. Also make biplots for `c(2,3)`, `c(3,4)`, `c(4,5)`, `c(5,6)`.     
+
+### Question 8  
+**PVE**  
+Does the plots show that `PC1` capture much more variance than `PC2`? `PC6`? (Of course we can confirm these with the PVE plot and calculations if we like. It is not required in this hw here.)     
+
+### Question 9  
+**Interesting plots**  
+If you look at the plot between `PC1` and `PC2`, it looks like a boomerang shape. (See image file in the hw zip.) Recall that `PC1` and `PC2` consists of rather different linear combinations of the original variables. And `PC1`-`PC2` have zero correlation. The chart shows us although `PC1` and `PC2` are overall un-correlated, when `PC1` change, there are only two different trends that `PC2` will change, as if there are only two types of nutrients in the 8000+ observations. Maybe these two kinds of food/items should be analyzed separately with two different models. These are some of the patterns and structures that PCA might be able to reveal.  
+
+At any rate, do you see other charts showing unexpected patterns?
+     
+## Optional  
+
+We will skip the model building using PCR here as it turns out not a productive exercise in that direction. While we are having this huge dataset, with 23 variables, this is actually a good candidate for performing the feature selection using leaps.  
+
+If you just look at the dataset and guess what are the good predictors to model Energy_kcal, what would you pick?  
+
+Now try run it by leaps regsubsets. What is the minimum number of predictors you will need, if you want to have a 90% $R^2$?  
+
+
+```{r, include=FALSE}
+# unloadPkg(???)
+```
+
+
+
