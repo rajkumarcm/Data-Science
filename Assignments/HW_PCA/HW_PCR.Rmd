@@ -36,13 +36,14 @@ This data was from USDA National Nutrient dataset, pre-processed by @craigkelly 
 ### Question 1  
 **Import the dataset**  
 Import the dataset into R. There should be 45 variables. Take a quick look at the data. Just str, head, and tail will do for now.  
-```{r}
+```{r, results='markup'}
 data <- read.csv(file='USDANationalNutrient.csv',
                  header=T, sep=',', fill=T, strip.white=T,
                  blank.lines.skip=T)
-xkabledplyhead(data)
+rmarkdown::paged_table(head(data))
 str(data)
-xkabledplytail(data)
+# Please don't get me wrong for using this as the html becomes too wide I had to use this.
+rmarkdown::paged_table(tail(data))
 ```
 
 
@@ -50,7 +51,7 @@ xkabledplytail(data)
 **Drop the first 7 variables**  
 Save the rest as a dataframe, and call it `nndf1`.   
 
-```{r}
+```{r, results='markup'}
 nndf1 <- data[, seq(-7, -1)]
 colnames(nndf1)
 ```
@@ -73,7 +74,7 @@ quick_model_vitb12 <- lm(VitB12_mcg~., data=nndf1)
 # summary(quick_model_vitb12)
 ```
 
-NAs are caused by multicollinearities in the predictor variables. One or more of the vectors in the predictor set can be reproduced by a linear combination of other vectors that have non-trivial solution. For vectors to be linearly independent, the linear combination of them should yield 0 only using a trivial solution (all coefficients of linear combination must be 0).  
+NAs are caused by multicollinearities in the predictor variables. One or more of the vectors in the predictor set can be reproduced by a linear combination of other vectors. For vectors to be linearly independent, the linear combination of them should yield 0 only using a trivial solution (all coefficients of linear combination must be 0).  
 
 ### Question 4  
 **Fix duplicate/collinear variables**  
@@ -83,22 +84,23 @@ You probably realize where the problem comes from. Alright then, let us
 * standardize all the variables, and 
 * the save the resulting dataframe as `nndf`  
 
-```{r}
+```{r, results='markup'}
 
 nndf <- scale(as.matrix(nndf1[, seq(1, 23)]))
 nndf <- data.frame(nndf)
+xkablesummary(nndf)
 ```
 
 Obtain a simple correlation matrix for the dataframe. If you use the function `xkabledply()` on the correlation matrix, it will print out a nice scrollable table for html and your console output.  
-```{r}
-xkabledply(cor(nndf))
+```{r, results='asis'}
+rmarkdown::paged_table(data.frame(cor(nndf)))
 ```
 
 ### Question 5  
 **VitB12_mcg**  
 Build a quick full model again for “VitB12_mcg”. What is the $R^2$ value? Notice that using PCA won’t improve the $R^2$. It will only match it if you use all 22 PC-components (1 target, 22 explanatory variables). However, this can be the baseline number to compare.  
 
-```{r}
+```{r, results='markup'}
 quick_model_vitb12 <- lm(VitB12_mcg~., data=nndf)
 quick_model_vitb12
 summary(quick_model_vitb12)
@@ -114,11 +116,12 @@ Instead of PCR, let us run the PCA on this dataset. The dataframe is already cen
 `nnpcomp <- prcomp(nndf)` to get the 23 PC-components. For `PC1`, which are the four strongest components it consists of?  
 (Ans: Riboflavin_mg at -0.3413, Niacin_mg at -0.3378, and so forth.)  
 And which are the four strongest for `PC2`?   
-```{r}
+```{r, results='markup'}
 nncomp <- prcomp(nndf)
 nncomp
 ```
-Carb_g at 0.4434, Sugar_g at 0.3588, Protein_g at -0.3434, VitB12_mcg at -0.3550 are the four strong components in PC2.  
+In `PC1` Riboflavin_mg at -0.3413, Niacin_mg at -0.3378, VitB6_mg at -0.3157, and Iron_mg at -0.2999 are the four strong components.  
+In `PC2` Carb_g at 0.4434, Sugar_g at 0.3588, Protein_g at -0.3434, VitB12_mcg at -0.3550 are the four strong components.  
 
 ### Question 7  
 **BiPlots**  
@@ -140,16 +143,28 @@ biplot(nncomp, c(5, 6), scale=0)
 **PVE**  
 Does the plots show that `PC1` capture much more variance than `PC2`? `PC6`? (Of course we can confirm these with the PVE plot and calculations if we like. It is not required in this hw here.)     
 
-Yes `PC1` captures more variance than `PC2` and `PC6` as well. This is also evident from seeing the normalized variance in each component.  
-In `PC1` vs `PC6` plot, I can see `Sugar_g`, `Carb_g` and `Selenium_mcg` are above 0. Hence, they are more stronger in `PC6` than in `PC1`.  
-Likewise, `VitE_mg` and `VitC_mg` are strong components in `PC6`.  
+**Variance in each component**  
+```{r, results='markup'}
+comp.var <- (nncomp$sdev)^2
+comp.var <- comp.var / sum(comp.var)
+comp.var <- data.frame(matrix(comp.var, nrow=1, ncol=23))
+colnames(comp.var) <- sprintf("PC%d", seq(1,23))
+rmarkdown::paged_table(comp.var)
+```
 
+They are somewhat cluttered. However I did extracted some information.  
+`PC1` captures more variance than `PC2` as I can see red arrows going little far on x-axis than on y-axis and `PC6` as well. This is also evident from seeing the normalized variance in each component.  
+Yes `PC1` captures more variance than `PC6`. I can see variables loaded to near -40 hence yes `PC1` does capture more variance. 
 
 ### Question 9  
 **Interesting plots**  
 If you look at the plot between `PC1` and `PC2`, it looks like a boomerang shape. (See image file in the hw zip.) Recall that `PC1` and `PC2` consists of rather different linear combinations of the original variables. And `PC1`-`PC2` have zero correlation. The chart shows us although `PC1` and `PC2` are overall un-correlated, when `PC1` change, there are only two different trends that `PC2` will change, as if there are only two types of nutrients in the 8000+ observations. Maybe these two kinds of food/items should be analyzed separately with two different models. These are some of the patterns and structures that PCA might be able to reveal.  
 
 At any rate, do you see other charts showing unexpected patterns?
+
+I am somewhat confused when you say When `PC1` change, there are only two different **trends** that `PC2` will change. Here is my understanding:  
+In `PC1` vs `PC6` plot, I can see `VitE_mg` and `VitC_mg` are strong components in `PC6` as they are coming all the way near -30.  
+In `PC2` vs `PC3` I can clearly see red arrows for `Energy_kcal` and `Fat_g` are near -20 on the y-axis while around 5 & 10 on x-axis. Hence these variables are more stronger in `PC3`.  
      
 ## Optional  
 
