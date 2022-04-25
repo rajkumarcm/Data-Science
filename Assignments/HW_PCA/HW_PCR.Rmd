@@ -36,17 +36,44 @@ This data was from USDA National Nutrient dataset, pre-processed by @craigkelly 
 ### Question 1  
 **Import the dataset**  
 Import the dataset into R. There should be 45 variables. Take a quick look at the data. Just str, head, and tail will do for now.  
+```{r}
+data <- read.csv(file='USDANationalNutrient.csv',
+                 header=T, sep=',', fill=T, strip.white=T,
+                 blank.lines.skip=T)
+xkabledplyhead(data)
+str(data)
+xkabledplytail(data)
+```
 
 
 ### Question 2  
 **Drop the first 7 variables**  
 Save the rest as a dataframe, and call it `nndf1`.   
 
+```{r}
+nndf1 <- data[, seq(-7, -1)]
+colnames(nndf1)
+```
+
 ## OLS full model  
 
 ### Question 3  
 **Issue with full OLS models**  
 All the variables are now numerical. Let us build a quick model (full model) to predict `Energy_kcal`, and another full model to predict `VitB12_mcg`. (No fancy output is required.) Vegetarian diet can often be low on B12, which makes one get tired easier. Having a model could be useful. What are the NAs for the coefficients mean? (Try google.) 
+```{r}
+quick_model_energy <- lm(Energy_kcal~., data=nndf1)
+quick_model_vitb12 <- lm(VitB12_mcg~., data=nndf1)
+
+# quick_model_energy
+# summary(quick_model_energy)
+```
+
+```{r}
+# quick_model_vitb12
+# summary(quick_model_vitb12)
+```
+
+NAs are caused by multicollinearities in the predictor variables. One or more of the vectors in the predictor set can be reproduced by a linear combination of other vectors that have non-trivial solution. For vectors to be linearly independent, the linear combination of them should yield 0 only using a trivial solution (all coefficients of linear combination must be 0).  
 
 ### Question 4  
 **Fix duplicate/collinear variables**  
@@ -56,12 +83,28 @@ You probably realize where the problem comes from. Alright then, let us
 * standardize all the variables, and 
 * the save the resulting dataframe as `nndf`  
 
-Obtain a simple correlation matrix for the dataframe. If you use the function `xkabledply()` on the correlation matrix, it will print out a nice scrollable table for html and your console output.  
+```{r}
 
+nndf <- scale(as.matrix(nndf1[, seq(1, 23)]))
+nndf <- data.frame(nndf)
+```
+
+Obtain a simple correlation matrix for the dataframe. If you use the function `xkabledply()` on the correlation matrix, it will print out a nice scrollable table for html and your console output.  
+```{r}
+xkabledply(cor(nndf))
+```
 
 ### Question 5  
 **VitB12_mcg**  
 Build a quick full model again for “VitB12_mcg”. What is the $R^2$ value? Notice that using PCA won’t improve the $R^2$. It will only match it if you use all 22 PC-components (1 target, 22 explanatory variables). However, this can be the baseline number to compare.  
+
+```{r}
+quick_model_vitb12 <- lm(VitB12_mcg~., data=nndf)
+quick_model_vitb12
+summary(quick_model_vitb12)
+```
+
+The adjusted $R^2$ is `r summary(quick_model_vitb12)$adj.r.squared` is almost the same as Multiple $R^2$. Hence the variables that we had included weren't too bad.  
 
 ## PCA  
 
@@ -71,14 +114,36 @@ Instead of PCR, let us run the PCA on this dataset. The dataframe is already cen
 `nnpcomp <- prcomp(nndf)` to get the 23 PC-components. For `PC1`, which are the four strongest components it consists of?  
 (Ans: Riboflavin_mg at -0.3413, Niacin_mg at -0.3378, and so forth.)  
 And which are the four strongest for `PC2`?   
+```{r}
+nncomp <- prcomp(nndf)
+nncomp
+```
+Carb_g at 0.4434, Sugar_g at 0.3588, Protein_g at -0.3434, VitB12_mcg at -0.3550 are the four strong components in PC2.  
 
 ### Question 7  
 **BiPlots**  
 Make a biplot between `PC1` and `PC2` like this: `biplot( nnpcomp, c(1,2), scale=0 )`. Continue to plot `PC1` with `PC3` (use `c(1,3)`), `c(1,4)`, `c(1,5)`, and `c(1,6)`. Also make biplots for `c(2,3)`, `c(3,4)`, `c(4,5)`, `c(5,6)`.     
 
+```{r}
+biplot(nncomp, c(1, 2), scale=0)
+biplot(nncomp, c(1, 3), scale=0)
+biplot(nncomp, c(1, 4), scale=0)
+biplot(nncomp, c(1, 5), scale=0)
+biplot(nncomp, c(1, 6), scale=0)
+biplot(nncomp, c(2, 3), scale=0)
+biplot(nncomp, c(3, 4), scale=0)
+biplot(nncomp, c(4, 5), scale=0)
+biplot(nncomp, c(5, 6), scale=0)
+```
+
 ### Question 8  
 **PVE**  
 Does the plots show that `PC1` capture much more variance than `PC2`? `PC6`? (Of course we can confirm these with the PVE plot and calculations if we like. It is not required in this hw here.)     
+
+Yes `PC1` captures more variance than `PC2` and `PC6` as well. This is also evident from seeing the normalized variance in each component.  
+In `PC1` vs `PC6` plot, I can see `Sugar_g`, `Carb_g` and `Selenium_mcg` are above 0. Hence, they are more stronger in `PC6` than in `PC1`.  
+Likewise, `VitE_mg` and `VitC_mg` are strong components in `PC6`.  
+
 
 ### Question 9  
 **Interesting plots**  
