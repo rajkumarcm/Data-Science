@@ -41,7 +41,7 @@ vignettes/*.pdf
 
 # optional
 # for knitted html
-*.html
+#*.html
 *.tmphtml
 # for MacOS system files
 .DS_Store
